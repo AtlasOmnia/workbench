@@ -1,0 +1,16 @@
+Workbench by Atlas Omnia (plugin id hermes-office-desktop) — Copyright 2026 Atlas Omnia
+
+SPDX-License-Identifier: Apache-2.0
+
+schemas/excel.json, schemas/word.json and schemas/powerpoint.json are byte-preserved
+copies of the canonical tool schema artifacts from the Hermes Office Live native
+bridge plugin (hackathon-office-live; excel.json at ed09456961ce95186fe7318bfbc0aa075340bd2b).
+validation.py reuses that plugin's schema validator. The OneNote tool schemas (onenote.py) are
+original to this plugin; addin/dev/demo-notebook.json is invented demo content.
+
+scripts/live/make_taskpane_doc.py applies the same transform as Microsoft's MIT-licensed
+office-addin-dev-settings sideload helper to a template read from a local install; no
+Microsoft template is included in this repository.
+
+Microsoft, Office, OneNote, Excel, Word, PowerPoint and Outlook are trademarks of Microsoft.
+Hermes is a Nous Research project. No endorsement or affiliation is implied.

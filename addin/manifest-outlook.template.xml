@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Outlook (MailApp) template: scripts/build_addin.py emits manifest-outlook.xml, replacing {{BASE}}, {{ORIGIN}},
+     {{ID}} and {{APP}}. Mail and calendar in ONE add-in: message read/compose and appointment attendee/organizer forms;
+     the task pane is pinnable (VersionOverrides 1.1) so it follows the selected message. ReadWriteItem covers the open
+     item only: no send, no recipients, no attendees, no save (see addin/outlook/executor.js and calendar.js). -->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+           xsi:type="MailApp">
+  <Id>{{ID}}</Id>
+  <Version>0.4.0.0</Version>
+  <ProviderName>Atlas Omnia</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Workbench for Outlook"/>
+  <Description DefaultValue="Workbench: works with Excel, Word, PowerPoint, OneNote and Outlook (mail and calendar) on the web. Your Hermes Desktop chat reads the open email or event and prepares drafts you send or save yourself. Talks only to Hermes on your computer."/>
+  <IconUrl DefaultValue="{{BASE}}assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="{{BASE}}assets/icon-80.png"/>
+  <SupportUrl DefaultValue="{{BASE}}support.html"/>
+  <AppDomains>
+    <AppDomain>{{ORIGIN}}</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.3"/>
+    </Sets>
+  </Requirements>
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="{{BASE}}{{APP}}/taskpane.html"/>
+        <RequestedHeight>360</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="{{BASE}}{{APP}}/taskpane.html"/>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <Permissions>ReadWriteItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="ReadOrEdit"/>
+    <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="ReadOrEdit"/>
+  </Rule>
+  <DisableEntityHighlighting>true</DisableEntityHighlighting>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.3">
+        <bt:Set Name="Mailbox"/>
+      </bt:Sets>
+    </Requirements>
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="OmniaWorksReadGroup">
+                <Label resid="Hermes.Group.Label"/>
+                <Control xsi:type="Button" id="OmniaWorksReadButton">
+                  <Label resid="Hermes.Button.Label"/>
+                  <Supertip>
+                    <Title resid="Hermes.Button.Label"/>
+                    <Description resid="Hermes.Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Hermes.Icon.16"/>
+                    <bt:Image size="32" resid="Hermes.Icon.32"/>
+                    <bt:Image size="80" resid="Hermes.Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Hermes.Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="OmniaWorksComposeGroup">
+                <Label resid="Hermes.Group.Label"/>
+                <Control xsi:type="Button" id="OmniaWorksComposeButton">
+                  <Label resid="Hermes.Button.Label"/>
+                  <Supertip>
+                    <Title resid="Hermes.Button.Label"/>
+                    <Description resid="Hermes.Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Hermes.Icon.16"/>
+                    <bt:Image size="32" resid="Hermes.Icon.32"/>
+                    <bt:Image size="80" resid="Hermes.Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Hermes.Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+          <ExtensionPoint xsi:type="AppointmentAttendeeCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="OmniaWorksAttendeeGroup">
+                <Label resid="Hermes.Group.Label"/>
+                <Control xsi:type="Button" id="OmniaWorksAttendeeButton">
+                  <Label resid="Hermes.Button.Label"/>
+                  <Supertip>
+                    <Title resid="Hermes.Button.Label"/>
+                    <Description resid="Hermes.Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Hermes.Icon.16"/>
+                    <bt:Image size="32" resid="Hermes.Icon.32"/>
+                    <bt:Image size="80" resid="Hermes.Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Hermes.Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+          <ExtensionPoint xsi:type="AppointmentOrganizerCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="OmniaWorksOrganizerGroup">
+                <Label resid="Hermes.Group.Label"/>
+                <Control xsi:type="Button" id="OmniaWorksOrganizerButton">
+                  <Label resid="Hermes.Button.Label"/>
+                  <Supertip>
+                    <Title resid="Hermes.Button.Label"/>
+                    <Description resid="Hermes.Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Hermes.Icon.16"/>
+                    <bt:Image size="32" resid="Hermes.Icon.32"/>
+                    <bt:Image size="80" resid="Hermes.Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Hermes.Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Hermes.Icon.16" DefaultValue="{{BASE}}assets/icon-16.png"/>
+        <bt:Image id="Hermes.Icon.32" DefaultValue="{{BASE}}assets/icon-32.png"/>
+        <bt:Image id="Hermes.Icon.80" DefaultValue="{{BASE}}assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Hermes.Taskpane.Url" DefaultValue="{{BASE}}{{APP}}/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="Hermes.Group.Label" DefaultValue="Workbench"/>
+        <bt:String id="Hermes.Button.Label" DefaultValue="Workbench"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="Hermes.Button.Tooltip" DefaultValue="Open the Workbench pane to pair this mailbox or calendar with your Hermes Desktop chat."/>
+      </bt:LongStrings>
+    </Resources>
+    <!-- Outlook versions with Mailbox 1.5 use this block instead: the same buttons, with a pinnable task pane. -->
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.5">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="OmniaWorksReadGroup">
+                  <Label resid="Hermes.Group.Label"/>
+                  <Control xsi:type="Button" id="OmniaWorksReadButton">
+                    <Label resid="Hermes.Button.Label"/>
+                    <Supertip>
+                      <Title resid="Hermes.Button.Label"/>
+                      <Description resid="Hermes.Button.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Hermes.Icon.16"/>
+                      <bt:Image size="32" resid="Hermes.Icon.32"/>
+                      <bt:Image size="80" resid="Hermes.Icon.80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Hermes.Taskpane.Url"/>
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+            <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="OmniaWorksComposeGroup">
+                  <Label resid="Hermes.Group.Label"/>
+                  <Control xsi:type="Button" id="OmniaWorksComposeButton">
+                    <Label resid="Hermes.Button.Label"/>
+                    <Supertip>
+                      <Title resid="Hermes.Button.Label"/>
+                      <Description resid="Hermes.Button.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Hermes.Icon.16"/>
+                      <bt:Image size="32" resid="Hermes.Icon.32"/>
+                      <bt:Image size="80" resid="Hermes.Icon.80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Hermes.Taskpane.Url"/>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+            <ExtensionPoint xsi:type="AppointmentAttendeeCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="OmniaWorksAttendeeGroup">
+                  <Label resid="Hermes.Group.Label"/>
+                  <Control xsi:type="Button" id="OmniaWorksAttendeeButton">
+                    <Label resid="Hermes.Button.Label"/>
+                    <Supertip>
+                      <Title resid="Hermes.Button.Label"/>
+                      <Description resid="Hermes.Button.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Hermes.Icon.16"/>
+                      <bt:Image size="32" resid="Hermes.Icon.32"/>
+                      <bt:Image size="80" resid="Hermes.Icon.80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Hermes.Taskpane.Url"/>
+                          <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+            <ExtensionPoint xsi:type="AppointmentOrganizerCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="OmniaWorksOrganizerGroup">
+                  <Label resid="Hermes.Group.Label"/>
+                  <Control xsi:type="Button" id="OmniaWorksOrganizerButton">
+                    <Label resid="Hermes.Button.Label"/>
+                    <Supertip>
+                      <Title resid="Hermes.Button.Label"/>
+                      <Description resid="Hermes.Button.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Hermes.Icon.16"/>
+                      <bt:Image size="32" resid="Hermes.Icon.32"/>
+                      <bt:Image size="80" resid="Hermes.Icon.80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Hermes.Taskpane.Url"/>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Hermes.Icon.16" DefaultValue="{{BASE}}assets/icon-16.png"/>
+          <bt:Image id="Hermes.Icon.32" DefaultValue="{{BASE}}assets/icon-32.png"/>
+          <bt:Image id="Hermes.Icon.80" DefaultValue="{{BASE}}assets/icon-80.png"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Hermes.Taskpane.Url" DefaultValue="{{BASE}}{{APP}}/taskpane.html"/>
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="Hermes.Group.Label" DefaultValue="Workbench"/>
+          <bt:String id="Hermes.Button.Label" DefaultValue="Workbench"/>
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="Hermes.Button.Tooltip" DefaultValue="Open the Workbench pane to pair this mailbox or calendar with your Hermes Desktop chat."/>
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

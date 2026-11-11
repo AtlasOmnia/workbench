@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+:root { color-scheme: light dark; font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+main { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+h1 { font-size: 18px; margin: 0; }
+#status { margin: 0; padding: 8px 10px; border-radius: 6px; font-size: 15px; background: color-mix(in srgb, currentColor 8%, transparent); }
+#status[data-state="paired"], #status[data-state="working"] { background: color-mix(in srgb, #107c41 22%, transparent); }
+#status[data-state="rejected"], #status[data-state="no-bridge"] { background: color-mix(in srgb, #c42b1c 22%, transparent); }
+form { display: flex; flex-direction: column; gap: 6px; }
+input { font: 600 18px/1.2 ui-monospace, Menlo, monospace; letter-spacing: 2px; padding: 6px 8px; text-transform: uppercase; }
+button { padding: 6px 12px; font: inherit; cursor: pointer; }
+#activity { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+#activity li + li { margin-top: 2px; }
+.fine { font-size: 12px; opacity: .8; margin: 0; }
+.subtitle { margin-top: -8px; }
+.build { font: 11px/1.3 ui-monospace, Menlo, monospace; opacity: .65; overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
+#activity li.err { color: #a4262c; color: light-dark(#a4262c, #ff99a4); }
+#links-panel { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); padding-top: 8px; }
+#links-panel h2 { font-size: 13px; margin: 0; }
+#links-panel ul { margin: 2px 0 0; padding-left: 16px; }
+#links-panel button.link { padding: 0; border: 0; background: none; color: #0563c1; text-decoration: underline; text-align: left; cursor: pointer; font: inherit; }
+#links-panel .err { color: #a4262c; }

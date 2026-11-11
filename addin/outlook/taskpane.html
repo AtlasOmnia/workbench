@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; connect-src 'self' http://127.0.0.1:*; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Workbench for Outlook</title>
+  <link rel="stylesheet" href="../shared/taskpane.css">
+  <script type="module" src="./taskpane.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Workbench</h1>
+    <p class="fine subtitle">works with Excel, Word, PowerPoint, OneNote and Outlook (mail and calendar) on the web</p>
+    <p id="status" role="status" aria-live="polite">Starting…</p>
+    <form id="pair-form" autocomplete="off">
+      <label for="code">Pairing code from your Hermes chat</label>
+      <input id="code" name="code" inputmode="latin" maxlength="9" placeholder="XXXX-XXXX" spellcheck="false" autocapitalize="characters" required>
+      <button id="pair" type="submit">Pair</button>
+    </form>
+    <button id="disconnect" type="button" hidden>Disconnect</button>
+    <ol id="activity" aria-label="Recent Hermes actions"></ol>
+    <p class="fine">Changes come only from the Hermes chat you paired with. When you ask, the open message (subject, people, date, text and attachment names) or the open event (subject, times, place, people's names and responses, text) is sent to Hermes on your own computer (127.0.0.1), nowhere else. Hermes never sends mail, never changes recipients or attendees and never saves events: drafts open for you to review.</p>
+    <p id="build" class="fine build" aria-label="Add-in build"></p>
+  </main>
+</body>
+</html>

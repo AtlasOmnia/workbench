@@ -1,0 +1,277 @@
+[
+  {
+    "name": "word_get_document_overview",
+    "description": "Get high-level details about the active Word document and current selection.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_read_selection",
+    "description": "Read the currently selected Word text.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_read_document_text",
+    "description": "Read text from the Word document body.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000,
+          "description": "Maximum number of text characters to return."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_apply_edit_plan",
+    "description": "Validate and apply a bounded exact-match edit plan with optional highlighting. Edits must target independent, non-overlapping source text, and each source search must be unique for its match options. Returns one result per requested replacement.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "edits": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "find": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000
+              },
+              "replace": {
+                "type": "string",
+                "maxLength": 5000
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 250
+              },
+              "highlightColor": {
+                "type": "string",
+                "description": "Optional highlight color (yellow or hex)."
+              },
+              "matchCase": {
+                "type": "boolean",
+                "default": false
+              },
+              "matchWholeWord": {
+                "type": "boolean",
+                "default": false
+              }
+            },
+            "required": [
+              "find",
+              "replace"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "edits"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_insert_text",
+    "description": "Insert text at the start, end, or current selection.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "location": {
+          "type": "string",
+          "enum": [
+            "start",
+            "end",
+            "selection"
+          ]
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_replace_selection",
+    "description": "Replace the current Word selection with text.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "highlightColor": {
+          "type": "string",
+          "description": "Optional highlight color for replacement text, e.g. yellow or #FFFF00. Use yellow when the user asks to highlight changes."
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_find_replace",
+    "description": "Find text in the Word document and replace matches.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "find": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "replace": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "matchCase": {
+          "type": "boolean"
+        },
+        "matchWholeWord": {
+          "type": "boolean",
+          "description": "Only replace whole-word matches."
+        },
+        "highlightColor": {
+          "type": "string",
+          "description": "Optional highlight color for replacement text, e.g. yellow or #FFFF00. Use yellow when the user asks to highlight changes."
+        }
+      },
+      "required": [
+        "find",
+        "replace"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_format_selection",
+    "description": "Set formatting properties on the current selection.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "bold": {
+          "type": "boolean"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "color": {
+          "type": "string",
+          "description": "Hex or named font color."
+        },
+        "highlightColor": {
+          "type": "string",
+          "description": "Highlight color, e.g. yellow or #FFFF00."
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Font size in points."
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_get_document_structure",
+    "description": "Get paragraph counts and bounded paragraph previews.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "maxParagraphs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_apply_style",
+    "description": "Apply a named Word style to every paragraph in the current selection.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "style": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "style"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_insert_ooxml",
+    "description": "Insert trusted WordprocessingML at the document start, end, or current selection.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "ooxml": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        },
+        "location": {
+          "type": "string",
+          "enum": [
+            "start",
+            "end",
+            "selection"
+          ]
+        }
+      },
+      "required": [
+        "ooxml"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "word_insert_comment",
+    "description": "Insert a comment on the current selection.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

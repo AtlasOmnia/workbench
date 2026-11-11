@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+# The add-in site (task panes, manifests, icons, support page) on GitHub Pages:
+#   https://atlasomnia.github.io/workbench/office/live/
+# This is the plugin's default add-in base (bridge_server.DEFAULT_ADDIN_BASE). Runs only on a push to main or by hand.
+# Actions are pinned to full commit SHAs (tag in the comment). No secrets; the Office.js mock (addin/dev) is never
+# published. SHA256SUMS in the site lists every published file.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out this plugin
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+
+      # The Pages artifact root is served at /workbench/, so the site goes to _site/office/live/.
+      - name: Build the add-in site
+        run: python scripts/build_addin.py --base https://atlasomnia.github.io/workbench/office/live/ --out _site/office/live
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}office/live/support.html
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1

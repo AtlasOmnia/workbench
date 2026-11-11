@@ -1,0 +1,27 @@
+{
+  "_about": "Fictional demo notebook for Workbench (no real people, companies or work data). Used by the Electron harness (?seed=demo) and by scripts/demo/demo_notebook.py to create the same pages in a real OneNote notebook.",
+  "name": "Lumen Bikes (demo)",
+  "sections": [
+    { "name": "Projects", "pages": [
+      { "title": "Q4 Launch", "html": [
+        "<p>Goal: launch the Lumen city e-bike subscription before the holidays. #launch</p><p>Background: [[Pricing review 2026-10-20|October pricing review]] and [[Launch meeting 2026-11-03]].</p><p>Open questions live in [[Risks]].</p>"
+      ] },
+      { "title": "Risks", "html": [
+        "<p>Supplier lead times for frame batch 2 are not confirmed. #risk</p><p>Pilot cities may not have enough repair partners.</p>"
+      ] }
+    ] },
+    { "name": "Meetings", "pages": [
+      { "title": "Launch meeting 2026-11-03", "html": [
+        "<p>Attendees: Priya (product), Sam (ops), Lee (finance).</p><p>Decided: run a pilot in two cities before any national launch. Lee asked for four weeks of pilot data first.</p><p>Pricing: keep the $29 per month plan for the pilot. The $39 premium tier waits until we have churn data.</p><p>Actions: Priya drafts the pilot plan by Nov 12. Sam books the two pilot cities. Someone needs to check supplier lead times.</p><p>Links: [[Q4 Launch]] #launch #pricing</p>"
+      ] },
+      { "title": "Pricing review 2026-10-20", "html": [
+        "<p>Options: A) $29 per month, B) $39 per month with insurance, C) pay per ride.</p><p>Rejected option B for now: churn risk without pilot data. Rejected C: too hard to forecast.</p><p>See [[Q4 Launch]]. #pricing</p>"
+      ] }
+    ] },
+    { "name": "Daily", "pages": [
+      { "title": "Daily 2026-11-04", "html": [
+        "<p>Focus: prep for the pilot plan review.</p><p>Read [[Launch meeting 2026-11-03]] again before Thursday.</p>"
+      ] }
+    ] }
+  ]
+}

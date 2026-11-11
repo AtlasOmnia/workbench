@@ -1,0 +1,453 @@
+[
+  {
+    "name": "powerpoint_get_presentation_overview",
+    "description": "Get high-level details about the active PowerPoint presentation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000,
+          "description": "Maximum number of text characters to include in any returned text payload."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_read_selected_slides",
+    "description": "Read the currently selected slides from the active presentation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "maxLength": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Maximum number of text characters to return."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_read_all_slides",
+    "description": "Read a summary of all slides in the active presentation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "maxLength": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Maximum number of text characters to return."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_create_slide",
+    "description": "Create a new slide at the end of the presentation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layoutId": {
+          "type": "string",
+          "description": "Optional slide layout ID."
+        },
+        "slideMasterId": {
+          "type": "string",
+          "description": "Optional slide master ID."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_create_text_slide",
+    "description": "Create one new slide with a title and optional body/bullets using safe non-overlapping default layout. Prefer this over multiple add_text_box calls when drafting deck content.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Slide title."
+        },
+        "body": {
+          "type": "string",
+          "description": "Optional body paragraph text."
+        },
+        "bullets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional bullet items. They are inserted into the body text box."
+        },
+        "layoutId": {
+          "type": "string",
+          "description": "Optional slide layout ID."
+        },
+        "slideMasterId": {
+          "type": "string",
+          "description": "Optional slide master ID."
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_add_text_box",
+    "description": "Add a text box to a specific slide.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "left": {
+          "type": "number",
+          "minimum": 0
+        },
+        "top": {
+          "type": "number",
+          "minimum": 0
+        },
+        "width": {
+          "type": "number",
+          "minimum": 1
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_update_slide_text",
+    "description": "Replace the currently selected text in the presentation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "shapeId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_add_speaker_notes",
+    "description": "Add speaker notes to a slide (not supported in this PowerPoint Office.js snapshot).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_add_shape",
+    "description": "Add a geometric shape to a specific slide.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "shapeType": {
+          "type": "string",
+          "description": "PowerPoint geometric shape name."
+        },
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "left": {
+          "type": "number",
+          "minimum": 0
+        },
+        "top": {
+          "type": "number",
+          "minimum": 0
+        },
+        "width": {
+          "type": "number",
+          "minimum": 1
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "shapeType"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_read_slide_content",
+    "description": "Read text content from shapes on a specific slide by index. Returns text from all text-bearing shapes (text boxes, rectangles with text, placeholders) on the slide.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the slide to read."
+        },
+        "maxLength": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Maximum text characters to return per shape."
+        }
+      },
+      "required": [
+        "slideIndex"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_delete_slide",
+    "description": "Delete a slide by index. Has a built-in guard against deleting the last remaining slide — if the presentation has only one slide, returns an error instead.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional zero-based index of the slide to delete. Defaults to the selected slide."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_duplicate_slide",
+    "description": "Duplicate a slide by index. NOT SUPPORTED — the current Office.js PowerPoint API surface (@types/office-js v1.0.599) has no slide duplication API. This tool exists to provide an actionable diagnostics response; use insertSlidesFromBase64 as an alternative workaround.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the slide to duplicate."
+        }
+      },
+      "required": [
+        "slideIndex"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_reorder_slide",
+    "description": "Move a slide from its current position to a new position within the presentation using Slide.moveTo (PowerPointApi 1.8).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "fromIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the slide to move."
+        },
+        "toIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based target position for the slide."
+        }
+      },
+      "required": [
+        "fromIndex",
+        "toIndex"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_find_and_replace_text",
+    "description": "Find and replace text on a slide. Searches shape text content using JavaScript-side string matching and replaces all occurrences. If shapeId is provided, only that shape is affected; otherwise searches all text-bearing shapes on the slide.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "findText": {
+          "type": "string",
+          "description": "The text string to search for."
+        },
+        "replaceText": {
+          "type": "string",
+          "description": "The replacement text string."
+        },
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the slide. Defaults to selected slide."
+        },
+        "shapeId": {
+          "type": "string",
+          "description": "Optional shape ID to limit the search to one shape."
+        }
+      },
+      "required": [
+        "findText",
+        "replaceText"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_list_slide_layouts",
+    "description": "List all slide masters and their available layouts. Returns slide master names/id and the layout names/types for each master.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_set_slide_layout",
+    "description": "Change the layout of a specific slide by applying a layout ID. Uses Slide.applyLayout() (PowerPointApi 1.8).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the slide to modify."
+        },
+        "layoutId": {
+          "type": "string",
+          "description": "The ID of the layout to apply (obtained from list_slide_layouts)."
+        }
+      },
+      "required": [
+        "slideIndex",
+        "layoutId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_format_text",
+    "description": "Format text in a shape by setting font properties (bold, italic, color, size, name). Uses TextRange.font (PowerPointApi 1.4). Only provided properties are applied.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the slide."
+        },
+        "shapeId": {
+          "type": "string",
+          "description": "ID of the shape containing the text to format."
+        },
+        "font": {
+          "type": "object",
+          "properties": {
+            "bold": {
+              "type": "boolean",
+              "description": "Bold state (true/false)."
+            },
+            "italic": {
+              "type": "boolean",
+              "description": "Italic state (true/false)."
+            },
+            "color": {
+              "type": "string",
+              "description": "HTML color code (e.g., '#FF0000' for red)."
+            },
+            "size": {
+              "type": "number",
+              "description": "Font size in points (e.g., 18)."
+            },
+            "name": {
+              "type": "string",
+              "description": "Font family name (e.g., 'Calibri')."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "slideIndex",
+        "shapeId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "powerpoint_add_image",
+    "description": "Add an image from a base64-encoded PNG or JPEG to a slide. NOT SUPPORTED — the current Office.js PowerPoint ShapeCollection API has no addImage method. This tool provides an actionable diagnostics response.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "base64Image": {
+          "type": "string",
+          "description": "Base64-encoded image data (PNG or JPEG)."
+        },
+        "slideIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of the target slide."
+        },
+        "left": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Left position in points."
+        },
+        "top": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Top position in points."
+        },
+        "width": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Width in points."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Height in points."
+        }
+      },
+      "required": [
+        "base64Image",
+        "slideIndex"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

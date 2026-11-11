@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Template: scripts/build_addin.py emits one manifest per host, replacing {{BASE}}, {{ORIGIN}}, {{ID}}, {{APP}},
+     {{LABEL}}, {{HOST}}, {{SET}}, {{SETVER}} and {{NOUN}}. -->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>{{ID}}</Id>
+  <Version>0.3.0.0</Version>
+  <ProviderName>Atlas Omnia</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Workbench for {{LABEL}}"/>
+  <Description DefaultValue="Workbench: works with Excel, Word, PowerPoint, OneNote and Outlook (mail and calendar) on the web. Free bridge that lets your Hermes Desktop chat read and edit this {{NOUN}} live. Talks only to Hermes on your own computer."/>
+  <IconUrl DefaultValue="{{BASE}}assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="{{BASE}}assets/icon-80.png"/>
+  <SupportUrl DefaultValue="{{BASE}}support.html"/>
+  <AppDomains>
+    <AppDomain>{{ORIGIN}}</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="{{HOST}}"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="{{SET}}" MinVersion="{{SETVER}}"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="{{BASE}}{{APP}}/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="{{HOST}}">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="HermesDesktopGroup">
+                <Label resid="Hermes.Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Hermes.Icon.16"/>
+                  <bt:Image size="32" resid="Hermes.Icon.32"/>
+                  <bt:Image size="80" resid="Hermes.Icon.80"/>
+                </Icon>
+                <Control xsi:type="Button" id="HermesDesktopShowPane">
+                  <Label resid="Hermes.Button.Label"/>
+                  <Supertip>
+                    <Title resid="Hermes.Button.Label"/>
+                    <Description resid="Hermes.Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Hermes.Icon.16"/>
+                    <bt:Image size="32" resid="Hermes.Icon.32"/>
+                    <bt:Image size="80" resid="Hermes.Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>Office.AutoShowTaskpaneWithDocument</TaskpaneId>
+                    <SourceLocation resid="Hermes.Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Hermes.Icon.16" DefaultValue="{{BASE}}assets/icon-16.png"/>
+        <bt:Image id="Hermes.Icon.32" DefaultValue="{{BASE}}assets/icon-32.png"/>
+        <bt:Image id="Hermes.Icon.80" DefaultValue="{{BASE}}assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Hermes.Taskpane.Url" DefaultValue="{{BASE}}{{APP}}/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="Hermes.Group.Label" DefaultValue="Workbench"/>
+        <bt:String id="Hermes.Button.Label" DefaultValue="Workbench"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="Hermes.Button.Tooltip" DefaultValue="Open the Workbench pane to pair this {{NOUN}} with your Hermes Desktop chat."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

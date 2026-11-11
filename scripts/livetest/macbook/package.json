@@ -1,0 +1,8 @@
+{
+  "name": "hol-livetest",
+  "private": true,
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "main": "main.js",
+  "devDependencies": { "electron": "44.9.3" }
+}

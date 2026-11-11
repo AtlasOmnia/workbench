@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Workbench — support</title></head>
+<body>
+<h1>Workbench</h1>
+<p><em>works with Excel, Word, PowerPoint, OneNote and Outlook (mail and calendar) on the web</em></p>
+<p>These free add-ins connect the notebook, workbook, document or presentation open in Office for the web to the Hermes Desktop chat you pair it with.
+They load Microsoft's Office.js library and otherwise talk only to Hermes on your own computer (127.0.0.1). No account, no telemetry and no server of their own.</p>
+<ol>
+  <li>In Hermes Desktop, ask Hermes to connect to OneNote, Excel, Word or PowerPoint. It shows a pairing code.</li>
+  <li>Hermes saves the manifests in Documents &gt; Omnia Works &gt; add-in manifests. In Excel, Word or PowerPoint for the web: Home &gt; Add-ins &gt; More Add-ins &gt; My Add-ins &gt; Manage My Add-ins &gt; Upload My Add-in; in OneNote: Insert &gt; Office Add-ins &gt; My Add-ins &gt; Manage My Add-ins &gt; Upload My Add-in. Choose <code>manifest-excel.xml</code>, <code>manifest-word.xml</code>, <code>manifest-powerpoint.xml</code> or <code>manifest-onenote.xml</code>, then Upload.</li>
+  <li>Open the Workbench pane and type the code. Reloading the pane reconnects to the same chat by itself.</li>
+</ol>
+<p>Hermes can undo most of its own recent changes (ask it to undo); each change says whether it can be undone. In Excel, Word and PowerPoint undo history is cleared when the pane reloads. In OneNote, Hermes keeps a change ledger on your computer; it can remove the blocks it added, but add-ins cannot delete pages, so a page Hermes created is opened for you to delete.</p>
+<p>OneNote: while the pane is paired, the page you open is sent to Hermes on your computer and indexed there (a local SQLite file in your Hermes profile). Hermes never rewrites your text; it keeps its links in one block per page marked "Links &amp; Backlinks".</p>
+<p>To remove an add-in, clear the browser data for Office (Office for the web keeps uploaded add-ins in browser storage).</p>
+</body>
+</html>

@@ -1,0 +1,125 @@
+# SPDX-License-Identifier: Apache-2.0
+name: hermes-office-desktop
+version: 0.3.0
+manifest_version: 2
+author: Atlas Omnia
+license: Apache-2.0
+description: >-
+  Workbench by Atlas Omnia — works with Excel, Word, PowerPoint, OneNote and Outlook (mail and calendar) on the web. Free plugin: your notes remember the decision, Hermes turns it into the work. Chat in Hermes
+  Desktop while the live OneNote, Excel, Word or PowerPoint for the web document in the Desktop
+  preview pane changes as Hermes works. OneNote pages feed a local index (links, backlinks,
+  cited answers, decisions) that becomes an Excel tracker, a Word brief and a short deck. A free
+  bridge add-in (Upload My Add-in) runs Office.js; no Microsoft app registration, Graph or OAuth.
+requires_hermes: ">=0.22.5"
+platforms: [macos, windows]  # Windows: one real Hermes Desktop session passed the 5-prompt story on 2026-11-10 with a single profile.
+tags: [office, onenote, excel, word, powerpoint, desktop, preview, second-brain]
+provides_tools:
+  - excel_get_workbook_overview
+  - excel_read_range
+  - excel_summarize_range_stats
+  - excel_write_range
+  - excel_format_range
+  - excel_conditional_format_range
+  - excel_freeze_panes
+  - excel_set_data_validation
+  - excel_create_sheet
+  - excel_delete_sheet
+  - excel_activate_sheet
+  - excel_insert_table
+  - excel_sort_table
+  - excel_filter_table
+  - excel_create_chart
+  - excel_find_replace
+  - excel_clear_range
+  - excel_autofill_formula
+  - excel_rename_sheet
+  - excel_copy_sheet
+  - excel_protect_sheet
+  - excel_unprotect_sheet
+  - excel_create_pivot_table
+  - excel_run_calculation
+  - excel_add_comment
+  - excel_clear_comments
+  - excel_import_csv_to_sheet
+  - word_get_document_overview
+  - word_read_selection
+  - word_read_document_text
+  - word_apply_edit_plan
+  - word_insert_text
+  - word_replace_selection
+  - word_find_replace
+  - word_format_selection
+  - word_get_document_structure
+  - word_apply_style
+  - word_insert_ooxml
+  - word_insert_comment
+  - powerpoint_get_presentation_overview
+  - powerpoint_read_selected_slides
+  - powerpoint_read_all_slides
+  - powerpoint_create_slide
+  - powerpoint_create_text_slide
+  - powerpoint_add_text_box
+  - powerpoint_update_slide_text
+  - powerpoint_add_speaker_notes
+  - powerpoint_add_shape
+  - powerpoint_read_slide_content
+  - powerpoint_delete_slide
+  - powerpoint_duplicate_slide
+  - powerpoint_reorder_slide
+  - powerpoint_find_and_replace_text
+  - powerpoint_list_slide_layouts
+  - powerpoint_set_slide_layout
+  - powerpoint_format_text
+  - powerpoint_add_image
+  - onenote_get_context
+  - onenote_list_sections
+  - onenote_list_pages
+  - onenote_get_page
+  - onenote_create_page
+  - onenote_append
+  - onenote_insert_table
+  - onenote_open_page
+  - brain_sync
+  - brain_ask
+  - brain_links
+  - brain_link_both_ways
+  - brain_decision_page
+  - brain_make_deliverables
+  - brain_why
+  - brain_resurface
+  - brain_from_email
+  - outlook_get_item
+  - outlook_insert
+  - outlook_draft_reply
+  - outlook_draft_new
+  - calendar_get_event
+  - calendar_update_draft
+  - calendar_draft_new
+  - office_connect
+  - office_status
+  - office_disconnect
+  - office_undo
+  - office_insert_image
+provides_hooks:
+  - pre_tool_call
+config_schema:
+  addin_base:
+    type: str
+    default: "https://atlasomnia.github.io/workbench/office/live/"
+    label: "Add-in site"
+    description: "Base URL of the add-in site (https, ending in /). The manifests, task panes and support page come from here, and the bridge accepts requests only from its origin (scheme and host)."
+  allowed_origin:
+    type: str
+    default: ""
+    label: "Add-in origin (self-hosting)"
+    description: "Older form for a self-hosted site: an https origin alone means its add-in site is <origin>/office/live/. Ignored when addin_base is set to another site; if both are set they must agree."
+  manifest_dir:
+    type: str
+    default: ""
+    label: "Add-in manifest folder"
+    description: "Absolute folder (~ allowed) where office_connect writes the five add-in manifests for allowed_origin. Empty: ~/Documents/Omnia Works/add-in manifests. A manifest you edited is never overwritten."
+  image_dirs:
+    type: list
+    default: []
+    label: "Extra image folders"
+    description: "Absolute folders office_insert_image may read PNG/JPEG files from, in addition to this profile's Hermes image cache (generated images, images, screenshots). Symlinks are resolved; '/' and your home folder itself are ignored."
