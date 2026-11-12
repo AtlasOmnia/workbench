@@ -427,3 +427,17 @@ def test_addin_files_are_checked_out_as_lf_on_every_os():
     SHA256SUMS and the bridge would refuse the whole add-in (404)."""
     rules = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
     assert "addin/** text=auto eol=lf" in rules
+
+
+def test_a_crlf_checkout_is_served_as_the_pinned_lf_bytes_and_nothing_else(tiny, tiny_site):
+    """Git for Windows can leave text files with CRLF (core.autocrlf; a changed .gitattributes does not rewrite
+    files git has already checked out). The bridge then serves the LF form, and only when that form is exactly the
+    pinned content: what reaches the pane always matches SHA256SUMS."""
+    page = b"<!doctype html><p>ok</p>\n"
+    (tiny_site / "excel" / "taskpane.html").write_bytes(page.replace(b"\n", b"\r\n"))
+    status, body, _ = fetch(tiny, PREFIX + "excel/taskpane.html")
+    assert status == 200 and body == page and sha(body) == listed(tiny_site)["excel/taskpane.html"]
+    (tiny_site / "excel" / "taskpane.html").write_bytes(b"<!doctype html><p>tampered</p>\r\n")
+    assert fetch(tiny, PREFIX + "excel/taskpane.html")[0] == 404
+    (tiny_site / "changed.js").write_bytes(b"export const y = 2\r\n")  # CRLF form of bytes that were never pinned
+    assert fetch(tiny, PREFIX + "changed.js")[0] == 404

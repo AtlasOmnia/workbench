@@ -164,8 +164,8 @@ def _site_sums(site: Path) -> Optional[dict]:
 def read_site_file(site: Optional[Path], encoded: str) -> Optional[tuple[bytes, str]]:
     """(content, MIME type) of a bundled add-in file, or None. ``encoded`` is the raw path after ADDIN_PATH.
 
-    Served only when the name is listed in the site's SHA256SUMS and the file's sha256 matches it now (checked on
-    every request). Refused: encoded separators, '..', backslashes, NUL, empty or doubled separators, anything under
+    Served only when the name is listed in the site's SHA256SUMS and the sha256 of the bytes sent matches it now
+    (checked on every request; a CRLF checkout is sent in its LF form when that form is the pinned content). Refused: encoded separators, '..', backslashes, NUL, empty or doubled separators, anything under
     dev/ (the Office.js mock), any symlink on the way, and anything that resolves outside the site folder."""
     if site is None or "%2f" in encoded.lower():
         return None
@@ -195,7 +195,12 @@ def read_site_file(site: Optional[Path], encoded: str) -> Optional[tuple[bytes, 
     except (OSError, ValueError):
         return None
     if not hmac.compare_digest(hashlib.sha256(content).hexdigest(), expected):
-        return None
+        # A Git for Windows checkout can hold text files with CRLF line endings (core.autocrlf). Serve the LF form,
+        # and only when that form is exactly the pinned content: the bytes sent always match SHA256SUMS.
+        unix = content.replace(b"\r\n", b"\n")
+        if unix == content or not hmac.compare_digest(hashlib.sha256(unix).hexdigest(), expected):
+            return None
+        content = unix
     return content, STATIC_MIME_TYPES.get(Path(name).suffix.lower(), "application/octet-stream")
 # Keep-alive connections that sit idle this long are closed, so an old connection can never keep a
 # released bridge reachable (must exceed POLL_WAIT_MAX: a held long-poll is not idle reading).

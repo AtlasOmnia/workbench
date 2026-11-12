@@ -325,7 +325,8 @@ The pairing code protects against web pages, not against other programs on the s
   only in this default and only when `Sec-Fetch-Site` is absent or `same-origin`. Any other origin gets 403. With a
   self-hosted `addin_base`: exactly that site's origin, as before.
 * Add-in files (`/office/live/...`): `GET`/`HEAD` only (else 405); only names listed in `addin/SHA256SUMS` whose
-  sha256 matches at that request; no symlinks, nothing outside `addin/`, never `addin/dev`; encoded separators
+  sha256 matches at that request (a Windows checkout with CRLF line endings is sent in its LF form, and only when
+  that form is the pinned content: the bytes sent always match the list); no symlinks, nothing outside `addin/`, never `addin/dev`; encoded separators
   (`%2f`), `..`, backslashes, NUL and empty segments get 404; a foreign `Origin` gets 403. Fixed MIME types,
   `X-Content-Type-Options: nosniff`, the panes' own Content-Security-Policy, `Referrer-Policy: no-referrer`. No
   `frame-ancestors`: Office for the web frames the pane from several Microsoft hosts.
