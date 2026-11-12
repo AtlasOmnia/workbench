@@ -65,7 +65,7 @@ test('pair, run a command, then a reloaded pane resumes the same binding without
 
 test('resume with a token the bridge no longer knows clears it and asks for a code', async () => {
   const b = fakeBridge(); const store = new Store(); const states = []
-  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'http://127.0.0.1:47615', token: 'old' }))
+  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'https://localhost:47615', token: 'old' }))
   const c = client(b, store, states)
   const r = await c.resume()
   assert.equal(r.ok, false)
@@ -75,7 +75,7 @@ test('resume with a token the bridge no longer knows clears it and asks for a co
 
 test('resume while Hermes is down keeps the saved pairing for later', async () => {
   const b = fakeBridge(); const store = new Store(); const states = []
-  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'http://127.0.0.1:47615', token: 'tok-x' }))
+  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'https://localhost:47615', token: 'tok-x' }))
   b.down = true
   const r = await client(b, store, states).resume()
   assert.equal(r.category, 'Unavailable')
@@ -192,8 +192,8 @@ test('released port: the pane finds its bridge by instance on the port it takes 
   w.ports.set(47617, a)
   a.queue.push({ requestId: 'r2', tool: 'read_range', arguments: {} })
   assert.ok(await until(() => a.results.length === 2))
-  assert.equal(c.base, 'http://127.0.0.1:47617')
-  assert.equal(JSON.parse(store.getItem('hermes-office-desktop:excel')).base, 'http://127.0.0.1:47617')
+  assert.equal(c.base, 'https://localhost:47617')
+  assert.equal(JSON.parse(store.getItem('hermes-office-desktop:excel')).base, 'https://localhost:47617')
   assert.deepEqual(other.auths, []) // B never saw A's pane token
   assert.ok(states.some(s => s.state === 'paired' && s.reconnected))
   assert.ok(!states.some(s => s.state === 'unpaired'))
@@ -208,10 +208,10 @@ test('a 401 from a bridge that is not ours is a moved port, not a revocation', a
   await c.pair('CODE-A')
   w.ports.set(47615, other) // swapped between two polls
   w.ports.set(47616, a)
-  assert.ok(await until(() => c.base === 'http://127.0.0.1:47616'))
+  assert.ok(await until(() => c.base === 'https://localhost:47616'))
   a.queue.push({ requestId: 'r1', tool: 'read_range', arguments: {} })
   assert.ok(await until(() => a.results.length === 1))
-  assert.equal(c.base, 'http://127.0.0.1:47616')
+  assert.equal(c.base, 'https://localhost:47616')
   assert.ok(!states.some(s => s.state === 'unpaired'))
   c.stopped = true
 })
@@ -230,14 +230,14 @@ test('a reloaded pane waits for its released bridge, then resumes on the new por
   const w = portWorld(); const store = new Store(); const states = []
   const a = w.bridge('A'); a.tokens.add('tok-A'); const other = w.bridge('B')
   w.ports.set(47615, other) // the saved port now belongs to another profile
-  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'http://127.0.0.1:47615', token: 'tok-A', instance: 'A', seenAt: Date.now() }))
+  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'https://localhost:47615', token: 'tok-A', instance: 'A', seenAt: Date.now() }))
   const c = wclient(w, store, states)
   const pending = c.resume({ waitMs: 60000, intervalMs: 5 })
   assert.ok(await until(() => states.some(s => s.state === 'waiting-bridge')))
   w.ports.set(47618, a) // A's next Office tool call took a port again
   const r = await pending
   assert.equal(r.ok, true)
-  assert.equal(c.base, 'http://127.0.0.1:47618')
+  assert.equal(c.base, 'https://localhost:47618')
   assert.ok(states.some(s => s.state === 'paired' && s.resumed && s.moved))
   assert.deepEqual(other.auths, [])
   c.stopped = true
@@ -245,7 +245,7 @@ test('a reloaded pane waits for its released bridge, then resumes on the new por
 
 test('a saved pairing older than the bridge keeps pairings is dropped instead of waited for', async () => {
   const w = portWorld(); const store = new Store(); const states = []
-  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'http://127.0.0.1:47615', token: 'tok-A', instance: 'A', seenAt: Date.now() - 16 * 60 * 1000 }))
+  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'https://localhost:47615', token: 'tok-A', instance: 'A', seenAt: Date.now() - 16 * 60 * 1000 }))
   const r = await wclient(w, store, states).resume({ waitMs: 60000, intervalMs: 5 })
   assert.equal(r.ok, false)
   assert.equal(store.getItem('hermes-office-desktop:excel'), null)
@@ -255,13 +255,13 @@ test('a saved pairing older than the bridge keeps pairings is dropped instead of
 test('a new pairing while the pane waits for its old bridge stops the wait', async () => {
   const w = portWorld(); const store = new Store(); const states = []
   const b2 = w.bridge('C'); w.ports.set(47619, b2)
-  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'http://127.0.0.1:47615', token: 'tok-A', instance: 'A', seenAt: Date.now() }))
+  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'https://localhost:47615', token: 'tok-A', instance: 'A', seenAt: Date.now() }))
   const c = wclient(w, store, states)
   const pending = c.resume({ waitMs: 60000, intervalMs: 5 })
   assert.ok(await until(() => states.some(s => s.state === 'waiting-bridge')))
   assert.equal((await c.pair('CODE-C')).ok, true)
   assert.equal((await pending).category, 'Superseded')
-  assert.equal(c.base, 'http://127.0.0.1:47619')
+  assert.equal(c.base, 'https://localhost:47619')
   c.stopped = true
 })
 
@@ -279,7 +279,7 @@ test('a bridge that goes away between hello and pair does not leave the pane stu
   const c = wclient(w, store, states)
   const r = await c.pair('CODE-A')
   assert.equal(r.ok, true)
-  assert.equal(c.base, 'http://127.0.0.1:47616')
+  assert.equal(c.base, 'https://localhost:47616')
   assert.equal(states.at(-1).state, 'paired')
   c.stopped = true
 })
@@ -309,7 +309,7 @@ test('a hello probe or pair request that never answers is bounded by a timeout',
   const t0 = Date.now()
   const r = await c.pair('CODE-A')
   assert.equal(r.ok, true)
-  assert.equal(c.base, 'http://127.0.0.1:47616')
+  assert.equal(c.base, 'https://localhost:47616')
   assert.ok(Date.now() - t0 < 1000, `pair took ${Date.now() - t0} ms`)
   c.stopped = true
   // the pair request itself hanging: bounded as well
@@ -321,4 +321,17 @@ test('a hello probe or pair request that never answers is bounded by a timeout',
   const r2 = await c2.pair('CODE-B')
   assert.equal(r2.ok, false)
   assert.equal(states2.at(-1).state, 'no-bridge')
+})
+
+test('the pane looks for Hermes over https://localhost on the five ports and drops a saved plain-http base', async () => {
+  const seen = []
+  const store = new Store()
+  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'http://127.0.0.1:47615', token: 'old', instance: 'A' }))
+  const fetchImpl = async (url) => { seen.push(url); throw new TypeError('Failed to fetch') }
+  const c = new BridgeClient({ app: 'excel', fetchImpl, storage: store, execute: async () => ({ ok: true }) })
+  assert.deepEqual(await c.discover(), [])
+  assert.deepEqual(seen, [47615, 47616, 47617, 47618, 47619].map(p => `https://localhost:${p}/v1/hello`))
+  assert.equal(c._saved(), null) // a pairing saved by an older pane over plain http is never reused
+  store.setItem('hermes-office-desktop:excel', JSON.stringify({ base: 'https://localhost:47616', token: 'tok' }))
+  assert.equal(c._saved().base, 'https://localhost:47616')
 })

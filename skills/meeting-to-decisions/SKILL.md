@@ -1,7 +1,7 @@
 ---
 name: meeting-to-decisions
 description: Use when the user wants decisions, owners and actions pulled from a OneNote meeting page and turned into a tracker, brief or deck. Runs brain_decision_page then brain_make_deliverables with quotes, never invented owners.
-version: 0.3.0
+version: 0.4.0
 license: Apache-2.0
 metadata:
   hermes:

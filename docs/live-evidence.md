@@ -4,6 +4,15 @@
 What was run live, on which commit, with which result. The README keeps only the one-line summary and the
 medians; this page keeps the per-run detail. How the harness works: [harness.md](harness.md).
 
+## 0.4.0: the add-in served by the plugin (not live-tested)
+
+0.4.0 stops defaulting to a GitHub Pages site: the bridge serves the pinned `addin/` files itself over HTTPS on
+`https://localhost:<port>/office/live/` with a per-profile local CA. Tested in unit and integration tests only
+(`tests/test_addin_served.py`, plus a throwaway bridge process that served every `SHA256SUMS`-listed file over HTTPS,
+verified against its generated CA, and refused the rest). **Not live-tested:** Office for the web loading the pane
+from `https://localhost` in Hermes Desktop needs the one-time CA trust and a Microsoft sign-in by a person; it has not
+been run on macOS or Windows yet. The runs below used earlier builds and a private add-in site.
+
 ## Current: F8 `402f00e` (A45/A46)
 
 Shipped runtime: `402f00e` (F8). A45 prepared the cold `office-live-c402f00e` profile and
@@ -24,18 +33,19 @@ the F8 story includes its reply write/undo, not a new standalone calendar matrix
 F7 below is historical evidence, not the shipped runtime. Source: A45-report.md and A46-report.md
 (private overnight evidence reports); no F8 timing medians were supplied there.
 
-Live runs used a private add-in site; the public GitHub Pages origin is first exercised at publication.
+Live runs used a private add-in site; the plugin-served add-in (the default since 0.4.0) is not live-tested yet.
 
 ### Post-publish smoke test (owner; not run yet)
 
-1. Publish `https://github.com/AtlasOmnia/workbench` and enable its GitHub Pages Actions deployment.
+1. Publish `https://github.com/AtlasOmnia/workbench` (no Pages deployment: the plugin serves its own add-in).
    Fill the catalog's publish-time `sha` with the intended pinned 40-hex commit; submit only after this smoke passes.
-2. Verify HTTP 200 for the public base's `manifest-excel.xml`, `excel/taskpane.html`, `SHA256SUMS` and `support.html`.
-3. Create a clean Hermes profile, install the published plugin, and leave `addin_base` and `allowed_origin` unset.
-4. In Hermes Desktop open a disposable Excel workbook, connect Excel, upload its generated manifest,
-   and have the person type the pairing code into Workbench.
+2. Create a clean Hermes profile, install the published plugin, and leave `addin_base` and `allowed_origin` unset.
+3. The person trusts that profile's local certificate authority with the command `/workbench trust` prints (the
+   plugin never does it).
+4. In Hermes Desktop open a disposable Excel workbook, connect Excel, upload its generated manifest (every URL
+   `https://localhost:<port>/office/live/...`), and have the person type the pairing code into Workbench.
 5. Approve one cell write, independently read it back, then call `office_undo` once and confirm the prior cells return.
-6. Record the commit, public origin, receipts and outcome here. A private-origin pass does not satisfy this check.
+6. Record the commit, the bridge port, receipts and outcome here. A private-origin pass does not satisfy this check.
 
 ## F7 `d1f7aae` (A31)
 

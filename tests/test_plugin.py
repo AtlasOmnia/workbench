@@ -12,6 +12,8 @@ import types
 from pathlib import Path
 
 import pytest
+
+import https_client
 from ruamel.yaml import YAML  # ships with Hermes 0.23.0 (PyYAML does not)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -243,8 +245,8 @@ def test_tools_fail_cleanly_with_hints(plugin):
 
 
 def _http(port, method, path, body=None, token=None):
-    c = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
-    h = {"Origin": ORIGIN, "Host": f"127.0.0.1:{port}"}
+    c = https_client.conn(port, timeout=30)
+    h = {"Origin": ORIGIN, "Host": f"localhost:{port}"}
     data = json.dumps(body).encode() if body is not None else None
     if data:
         h.update({"Content-Type": "application/json", "Content-Length": str(len(data))})
@@ -302,9 +304,14 @@ def test_connect_binds_that_chat_per_app_and_routes_undo(plugin, app, tool, cano
 
 
 def test_plugin_holds_no_credentials():
-    text = "\n".join(p.read_text() for p in ROOT.glob("*.py"))
-    for forbidden in (".env", "auth.json", "get_secret", "keychain", "os.environ"):
+    files = {p.name: p.read_text() for p in ROOT.glob("*.py")}
+    text = "\n".join(files.values())
+    for forbidden in (".env", "auth.json", "get_secret", "os.environ"):
         assert forbidden not in text
+    # "keychain" only in bridge_tls.py's printed trust instructions: a command the user reviews and runs. The plugin
+    # never opens a keychain, calls the Security framework or runs a command.
+    assert [name for name, t in files.items() if "keychain" in t and name != "bridge_tls.py"] == []
+    assert not any(x in files["bridge_tls.py"] for x in ("subprocess", "ctypes", "os.system", "popen("))
     # The only environment reads are the two non-secret Hermes session markers.
     assert set(re.findall(r"os\.getenv\(([^,)]+)", text)) == {"name"}
     init = (ROOT / "__init__.py").read_text()
@@ -436,7 +443,7 @@ def test_build_writes_an_honest_build_identity_into_the_pane(tmp_path):
         assert hashlib.sha256((site / n).read_bytes()).hexdigest() == h
     others = "".join(f"{h}  {n}\n" for h, n in sums if n != "shared/build-info.js").encode()
     assert info["build"] == hashlib.sha256(others).hexdigest()[:12]
-    assert info["version"] == "0.3.0"
+    assert info["version"] == "0.4.0"
     head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True).stdout.strip()
     top = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--show-toplevel"], capture_output=True, text=True).stdout.strip()
     if top and Path(top).resolve() == ROOT.resolve():
@@ -501,7 +508,7 @@ def test_display_name_is_omnia_works_and_ids_are_unchanged(plugin, tmp_path):
     assert 'name: hermes-office-desktop\ntitle: "Workbench by Atlas Omnia"' in cat
     man = (ROOT / "plugin.yaml").read_text()
     assert man.startswith("# SPDX-License-Identifier: Apache-2.0\nname: hermes-office-desktop\n") and "Workbench by Atlas Omnia — " + descriptor in man
-    assert (ROOT / "README.md").read_text().splitlines()[1] == "# Workbench by Atlas Omnia (0.3.0)"
+    assert (ROOT / "README.md").read_text().splitlines()[1] == "# Workbench by Atlas Omnia (0.4.0)"
     assert "Copyright 2026 Atlas Omnia" in (ROOT / "NOTICE").read_text()  # legal author unchanged
 
 
@@ -519,7 +526,7 @@ def test_outlook_manifest_is_a_mailapp_with_read_and_compose_and_no_send_permiss
     assert xml.count("<Id>") == 1 and "ReadWriteMailbox" not in xml
     assert "<Permissions>ReadWriteItem</Permissions>" in xml  # the open item only, never ReadWriteMailbox
     assert "<SupportsPinning>true</SupportsPinning>" in xml and "VersionOverridesV1_1" in xml
-    assert "https://atlasomnia.github.io/workbench/office/live/outlook/taskpane.html" in xml
+    assert "https://localhost:47615/office/live/outlook/taskpane.html" in xml
     assert not (tmp_path / "s" / "dev").exists() and (tmp_path / "s" / "outlook" / "executor.js").exists()
 
 

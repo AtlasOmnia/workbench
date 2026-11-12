@@ -43,12 +43,18 @@ FETCH_TIMEOUT = 15.0
 MAX_REDIRECTS = 3
 MAX_HTML_CHARS = 200_000
 MAX_HTML_IMAGES = 5
+REPO_URL = "https://github.com/AtlasOmnia/workbench"
+
+
 def user_agent(base: str) -> str:
-    """The image fetch User-Agent names the support page of the configured add-in site (plugin addin_base)."""
+    """The image fetch User-Agent names the support page of the configured add-in site (plugin addin_base); the
+    plugin-served loopback site is unreachable from the image host, so that one names the public repository."""
+    if urlsplit(base).hostname == "localhost":
+        return f"HermesOfficeDesktop (office_insert_image; +{REPO_URL})"
     return f"HermesOfficeDesktop (office_insert_image; +{base}support.html)"
 
 
-USER_AGENT = user_agent(DEFAULT_ADDIN_BASE)  # only when no base is passed (the default site)
+USER_AGENT = user_agent(DEFAULT_ADDIN_BASE)  # only when no base is passed (the plugin-served default)
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 JPEG_MAGIC = b"\xff\xd8\xff"
 MIME_OF = {"png": "image/png", "jpeg": "image/jpeg"}

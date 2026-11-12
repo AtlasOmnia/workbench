@@ -16,7 +16,7 @@ def test_readme_is_short_and_starts_with_the_one_sentence():
     text = (ROOT / "README.md").read_text()
     assert len(text.encode()) < 13 * 1024  # A34: +1 KiB for the real-Desktop first-connect steps and limits
     lines = text.splitlines()
-    assert lines[1] == "# Workbench by Atlas Omnia (0.3.0)" and lines[2] == ""
+    assert lines[1] == "# Workbench by Atlas Omnia (0.4.0)" and lines[2] == ""
     assert lines[3] == ("Open and edit Word, Excel, PowerPoint, OneNote and Outlook in a Hermes Desktop tab, with your "
                         "agent working alongside you.")
     assert "shipped runtime 402f00e (F8, A46): all four apps 1/1 with images" in text

@@ -71,7 +71,7 @@ def test_ssh_hello_uses_the_tunnel_and_survives_ssh_errors():
         seen.append(cmd)
         return Out()
     assert w.ssh_hello("mac", "https://o", runner=runner)
-    assert seen[0][:2] == ["ssh", "-o"] and "127.0.0.1:47615/v1/hello" in seen[0][-1] and "Origin: https://o" in seen[0][-1]
+    assert seen[0][:2] == ["ssh", "-o"] and "https://localhost:47615/v1/hello" in seen[0][-1] and "Origin: https://o" in seen[0][-1]
 
     def broken(cmd, **kw):
         raise OSError("no ssh")
@@ -93,6 +93,6 @@ def test_the_preflight_finds_the_bridge_on_any_of_the_five_ports():
         seen.append(cmd)
         return Out(b'\n{"service":"hermes-office-desktop","protocol":1}\n\n\n\n')
     assert w.ssh_hello("mac", "https://o", runner=runner)
-    assert len(seen) == 1 and all(f"127.0.0.1:{p}/v1/hello" in seen[0][-1] for p in range(47615, 47620))
+    assert len(seen) == 1 and all(f"https://localhost:{p}/v1/hello" in seen[0][-1] for p in range(47615, 47620))
     assert w.ssh_hello("mac", "https://o", runner=lambda cmd, **kw: Out(b"<html>captive</html>\n\n\n\n\n")) is False
     assert w.ssh_hello("mac", "https://o", runner=lambda cmd, **kw: Out(b"")) is False

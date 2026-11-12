@@ -8,18 +8,25 @@ How Workbench fits together, every tool family, its limits, the bridge's securit
 ```
 Hermes Desktop
 ├── chat (agent)  ── excel_* / word_* / powerpoint_* ──► plugin (this repo, Python)
-│                                                         └─ loopback bridge 127.0.0.1:47615-47619
-└── preview pane (Electron <webview>)                            ▲  long-poll / result (CORS, exact origin)
+│                                                         └─ loopback HTTPS bridge, https://localhost:47615-47619
+└── preview pane (Electron <webview>)                            ▲  long-poll / result (same origin by default)
     └── Excel | Word | PowerPoint for the web (user signs in)    │
-        └── "Workbench" task pane     <addin_base><app>/taskpane.html
+        └── "Workbench" task pane     served by the bridge: /office/live/<app>/taskpane.html
               └─ Office.js  →  the live document
 ```
 
-* **One add-in base URL.** The plugin setting `addin_base` (default `https://atlasomnia.github.io/workbench/office/live/`,
-  the GitHub Pages site `.github/workflows/pages.yml` builds from this repository) is the one source of truth: the
-  manifests' task-pane, icon and support URLs, the image fetch User-Agent's support link and every URL in
-  `firstTimeSetup` come from it, and the bridge's CORS check compares the request's `Origin` with its origin
-  (scheme, host and port) only. The older setting `allowed_origin` still works: an origin alone means
+* **The add-in comes from the plugin.** By default the bridge itself serves the add-in: the pinned tree's `addin/`
+  files on `https://localhost:<port>/office/live/` (the port the bridge bound: 47615, or the next free one), only
+  names listed in `addin/SHA256SUMS` whose sha256 still matches, never `addin/dev`. The pane and the bridge are then
+  one origin. The bridge's certificate comes from a local certificate authority created for this Hermes profile
+  (`plugin-data/hermes-office-desktop/tls`); Office loads the pane only after you trust it once yourself, with the
+  command `office_connect` (`data.trust`), `/workbench trust` or `hermes workbench trust` prints. The plugin never
+  changes certificate trust.
+* **One add-in base URL.** The plugin setting `addin_base` (default `https://localhost:47615/office/live/`, whose
+  port follows the bound port) is the one source of truth: the manifests' task-pane, icon and support URLs and
+  every URL in `firstTimeSetup` come from it, and the bridge's CORS check compares the request's `Origin` with its
+  origin (scheme, host and port) only. A self-hosted site is optional (see "Self-hosting the add-in"); the image
+  fetch User-Agent names its support page, or the public repository for the loopback default. The older setting `allowed_origin` still works: an origin alone means
   `<origin>/office/live/`. If both are set they must agree (else `Configuration` error); `addin_base` set to the
   default value does not override an `allowed_origin`.
 * **Manifests, no download.** `office_connect` writes the five manifests for that base (`scripts/build_addin.py`'s
@@ -30,7 +37,10 @@ Hermes Desktop
   Add-ins > Upload My Add-in). This is the path that worked in every live run. Writes are atomic and idempotent; a file whose hash is not the one the plugin last
   wrote there (recorded in `.omnia-works-manifests.json`) is the user's and is never overwritten: the plugin writes
   `manifest-<app> (Omnia Works).xml` instead. If the folder cannot be written, `manifestPath` is absent and
-  `firstTimeSetup` names `<addin_base>manifest-<app>.xml`.
+  `firstTimeSetup` says to set `manifest_dir` and run `/workbench manifest` (a self-hosted site: it names
+  `<addin_base>manifest-<app>.xml`). `/workbench manifest` in a chat, or `hermes workbench manifest` in a terminal
+  (which finds this profile's running bridge over HTTPS and never starts one), writes the five manifests for the
+  bridge's current port.
 * `office_connect {"app": ...}` mints a single-use 8-character code bound to **the chat
   session that asked**. The user types it into that app's task pane. That is the only way
   a pane gets a bearer token; another chat (or any other local page) cannot drive it.
@@ -268,7 +278,7 @@ step; nothing is retried. `office_undo` for that app removes exactly the inserte
 
 ## Limits: five bridge ports, shared by every profile
 
-The pane can only look for Hermes on five fixed loopback ports (127.0.0.1:47615-47619). Under a
+The pane can only look for Hermes on five fixed loopback ports (https://localhost:47615-47619, bound on 127.0.0.1). Under a
 multiplexed gateway each Hermes profile that uses Workbench runs its own bridge (its own pairings,
 tokens and OneNote index; nothing is shared between profiles), and each bridge needs one of those ports.
 
@@ -281,6 +291,10 @@ tokens and OneNote index; nothing is shared between profiles), and each bridge n
   which may be a different one, and the pane finds its bridge there by itself (it looks for its bridge's
   random `instance` id in `/v1/hello` on all five ports and never sends its token to another profile's
   bridge). While a pane is open and polling, its port is never given back.
+* **The bridge serves the pane, so the pane loads only while a bridge listens on its port.** Reopening Workbench
+  after an idle release shows Office's add-in error until the bridge takes a port again: ask Hermes (`office_status`
+  or "connect to <app>"), then reopen Workbench. A pane that stayed open waits and reconnects by itself, also on a
+  different port: every Workbench bridge accepts panes served by its five sibling ports.
 * **When all five are taken**, `office_connect` fails with `PortsBusy` and `office_status` reports
   `bridgeBusy`, both saying: "All five Workbench bridge ports (127.0.0.1:47615-47619) are in use: five
   Hermes profiles are using Workbench right now (or another program holds a port). Close a Workbench
@@ -298,12 +312,25 @@ tokens and OneNote index; nothing is shared between profiles), and each bridge n
 ## Bridge security
 
 The pairing code protects against web pages, not against other programs on the same computer.
-The default GitHub Pages origin is shared with other AtlasOmnia Pages sites; keep those free of third-party content or move the add-in to a dedicated origin later.
 
-* Binds `127.0.0.1` only, fixed ports 47615-47619 (the pane probes exactly these); an idle bridge
-  gives its port back (see "Limits"), and a request on a connection to a released listener gets 503.
-* Every route requires `Origin` equal to the add-in base's origin (default `https://atlasomnia.github.io`,
-  from `addin_base`) and `Host` equal to the literal bind (DNS-rebinding guard).
+* Binds `127.0.0.1` only, HTTPS only, fixed ports 47615-47619 (the pane probes exactly these); on Windows the port
+  is bound exclusively. An idle bridge gives its port back (see "Limits"), and a request on a connection to a
+  released listener gets 503.
+* `Host` must be exactly `localhost:<bound port>` (else 421: DNS-rebinding guard, no numeric-host fallback).
+* Every `/v1` route requires an allowed `Origin`. Default: one of the five Workbench loopback origins
+  `https://localhost:47615` to `https://localhost:47619`: the pane's own port is same-origin, the others are sibling
+  Workbench bridges serving the same hash-checked files (a pane needs them after an idle release moved its bridge,
+  or when several profiles share one uploaded manifest). A same-origin `GET` carries no `Origin`; it is accepted
+  only in this default and only when `Sec-Fetch-Site` is absent or `same-origin`. Any other origin gets 403. With a
+  self-hosted `addin_base`: exactly that site's origin, as before.
+* Add-in files (`/office/live/...`): `GET`/`HEAD` only (else 405); only names listed in `addin/SHA256SUMS` whose
+  sha256 matches at that request; no symlinks, nothing outside `addin/`, never `addin/dev`; encoded separators
+  (`%2f`), `..`, backslashes, NUL and empty segments get 404; a foreign `Origin` gets 403. Fixed MIME types,
+  `X-Content-Type-Options: nosniff`, the panes' own Content-Security-Policy, `Referrer-Policy: no-referrer`. No
+  `frame-ancestors`: Office for the web frames the pane from several Microsoft hosts.
+* TLS: a per-profile local CA (RSA 2048, name-constrained to `localhost` and `127.0.0.1`, 825 days) and a
+  `localhost` certificate (renewed under the same CA), owner-only files in `plugin-data/hermes-office-desktop/tls`.
+  The plugin never adds it to an OS trust store; you run the printed command yourself.
 * Codes: 30-symbol alphabet, 8 chars, 10-minute TTL, single use, app-specific; 5 wrong
   tries burn live codes; 20 failures/minute trips a global limit.
 * Pane tokens: 256-bit, kept in the pane tab's `sessionStorage` (cleared when the tab
@@ -328,34 +355,37 @@ Requires the Hermes Desktop app (macOS 13+ or Windows); the browser Webapp (`web
   reports `surface: 'iframe'` in that case; the agent then tells you to switch to the Desktop app instead
   of minting a pairing code.
 * The bridge listens on the gateway host's loopback (`127.0.0.1:47615-47619`). A Desktop window chatting
-  with a remote or SSH gateway needs those ports forwarded to the machine that shows the pane.
+  with a remote or SSH gateway needs those ports forwarded to the machine that shows the pane, and that machine must
+  trust the profile's local CA (`ca.pem` from the gateway's `plugin-data/hermes-office-desktop/tls`).
 * A Microsoft account and Office for the web (OneNote, Excel, Word or PowerPoint); for Outlook, an account
   with an Outlook.com (or Microsoft 365) mailbox.
 
 ## Self-hosting the add-in
 
-The default site is GitHub Pages (`.github/workflows/pages.yml`, on a push to `main` or by hand: it runs
-`scripts/build_addin.py --base https://atlasomnia.github.io/workbench/office/live/` and deploys the result).
-Self-hosting instead: `python3 scripts/build_addin.py --base https://<host>/<any path>/ --out <dir>`, serve `<dir>`
+Optional; the default needs no site (the plugin serves its own pinned add-in). To host the pane yourself:
+`python3 scripts/build_addin.py --base https://<host>/<any path>/ --out <dir>`, serve `<dir>`
 over HTTPS at that URL, and set `plugins.entries.hermes-office-desktop.settings.addin_base: https://<host>/<any path>/`
 in the profile's `config.yaml` (or the older `allowed_origin: https://<host>` when the site is at
-`https://<host>/office/live/`). These steps follow the tested path; a full walk-through from a clean profile by
+`https://<host>/office/live/`). The bridge then accepts exactly that origin and serves no add-in files; the pane still
+reaches the bridge on `https://localhost`, so the local CA trust step applies too. `.github/workflows/pages.yml`
+builds such a site on GitHub Pages by hand only (`workflow_dispatch`); it is never the default. These steps follow the tested path; a full walk-through from a clean profile by
 someone new to the project is still pending.
 
 ## Disclosures
 
-* Opens a loopback HTTP listener on `127.0.0.1:47615-47619` (in the process that runs Hermes
+* Opens a loopback HTTPS listener on `127.0.0.1:47615-47619` (in the process that runs Hermes
   tools) the first time `office_connect` runs; it closes after 10 idle minutes and opens again on the
   next Office tool call of a still-paired chat (or the next `office_connect`).
-* **The task pane is hosted outside the catalog pin.** The add-in page is served over HTTPS
-  from `<addin_base>` (default `https://atlasomnia.github.io/workbench/office/live/`), not from the pinned plugin checkout, so it
-  can change without a SHA bump. Each release publishes `SHA256SUMS` for that site, built by
-  `scripts/build_addin.py` from the same commit; rebuild at the pinned commit and compare
-  (`shasum -a 256 -c SHA256SUMS`) to check the served files. The plugin does not update itself.
-  The Workbench pane footer shows the build it actually loaded (`Workbench add-in 0.3.0 · build <id> · source
-  <commit>`, plus "+ uncommitted changes" for a dirty tree): `<id>` is the first 12 hex of the
-  sha256 over the `SHA256SUMS` lines of every other emitted file, so a pane served from an older
-  browser cache shows a different id. It is a label for diagnosis, not an attestation.
+* **The task pane comes from the catalog pin.** By default the bridge serves the add-in page from the plugin's own
+  `addin/` files, only those `addin/SHA256SUMS` lists with a matching sha256 (`scripts/build_addin.py --bundle`
+  regenerates that list, the icons and `shared/build-info.js`). The Workbench pane footer shows the build it loaded
+  (`Workbench add-in 0.4.0 · build <id> · source unknown` for the bundle, which cannot name its own commit; a
+  self-hosted site build adds `source <commit>`): `<id>` is the first 12 hex of the sha256 over the `SHA256SUMS`
+  lines of every other file, so a pane from an older browser cache shows a different id. It is a label for
+  diagnosis, not an attestation. A self-hosted `addin_base` is outside the pin by definition.
+* **A local certificate authority.** The first bridge start creates a CA and a `localhost` certificate for this
+  profile in `plugin-data/hermes-office-desktop/tls` (owner-only). Trusting it is up to you: the plugin prints the
+  command and never runs it. Remove that trust when you stop using Workbench.
 * Needs Office for the web and a Microsoft account (you sign in yourself in the pane). Edits
   ask for Hermes approval. No telemetry.
 * **Outbound HTTPS, for one purpose only:** the plugin fetches an image URL the agent passes to
@@ -404,13 +434,13 @@ someone new to the project is still pending.
 
 | Path | What |
 | --- | --- |
-| `__init__.py`, `bridge_server.py`, `validation.py`, `plugin.yaml` | Hermes plugin (stdlib only) |
+| `__init__.py`, `bridge_server.py`, `bridge_tls.py`, `validation.py`, `plugin.yaml` | Hermes plugin (stdlib, plus `cryptography` for the local CA) |
 | `onenote.py`, `brain.py` | OneNote host + brain tools; the SQLite index, link resolution, ledger, provenance |
 | `outlook.py` | Outlook mail and calendar tools, `brain_from_email` (emails and events), the reply-draft and follow-up meeting deliverables |
 | `images.py` | `office_insert_image` sources: allowed local folders, the guarded HTTPS image fetch, the HTML sanitizer |
 | `skills/office-desktop/`, `skills/daily-note/`, `skills/meeting-to-decisions/` | Bundled skills: pairing/editing/undo; the daily-note template; meeting to decisions to deliverables |
-| `addin/` | Bridge add-in: manifest templates (TaskPaneApp for 4 hosts, MailApp for Outlook), shared pane UI/bridge client/runtime, one executor per host, Office.js mocks and the fictional demo notebook (`dev/`, never deployed) |
-| `scripts/build_addin.py` | Builds `dist/office/live/` (5 manifests) for a base URL, writes `SHA256SUMS` |
+| `addin/` | Bridge add-in, served by the bridge: `SHA256SUMS` (exactly the files it serves), icons (`assets/`), manifest templates (TaskPaneApp for 4 hosts, MailApp for Outlook), shared pane UI/bridge client/runtime, one executor per host, Office.js mocks and the fictional demo notebook (`dev/`, never deployed) |
+| `scripts/build_addin.py` | `--bundle` refreshes `addin/SHA256SUMS`, icons and `shared/build-info.js`; `--base` builds a site to self-host (5 manifests, `SHA256SUMS`) |
 | `scripts/demo/demo_notebook.py`, `docs/demo.md` | Demo storyline and the seed content for a real OneNote notebook |
 | `scripts/serve_addin.py`, `scripts/live/` | Local live testing only: loopback HTTPS server, coverage plans, runner, CDP driver for desktop Office |
 | `scripts/livetest/` | Automated live test in Office for the web: client Mac Electron harness (`macbook/`), Studio-side chat + UI driver, `run_macbook.sh` |

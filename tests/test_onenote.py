@@ -7,6 +7,8 @@ import sys
 
 import pytest
 
+import https_client
+
 from onenote_fakes import FakeHost, FakeOneNote, PaneThread
 
 ORIGIN = "https://addin.test:8444"
@@ -205,9 +207,9 @@ def test_visit_event_indexes_page_and_wrong_notebook_is_dropped(world):
     page = world.note.read(world.note.by_title("Q4 Launch"))
 
     def post(body):
-        c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+        c = https_client.conn(port, timeout=10)
         data = json.dumps(body).encode()
-        c.request("POST", "/v1/event", body=data, headers={"Origin": ORIGIN, "Host": f"127.0.0.1:{port}",
+        c.request("POST", "/v1/event", body=data, headers={"Origin": ORIGIN, "Host": f"localhost:{port}",
                                                            "Content-Type": "application/json", "Content-Length": str(len(data)),
                                                            "Authorization": f"Bearer {token}"})
         r = c.getresponse()
@@ -224,9 +226,9 @@ def test_visit_event_indexes_page_and_wrong_notebook_is_dropped(world):
 
 def _post_event(world, body):
     port, token = world.server.port, world.binding.token
-    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    c = https_client.conn(port, timeout=10)
     data = json.dumps(body).encode()
-    c.request("POST", "/v1/event", body=data, headers={"Origin": ORIGIN, "Host": f"127.0.0.1:{port}",
+    c.request("POST", "/v1/event", body=data, headers={"Origin": ORIGIN, "Host": f"localhost:{port}",
                                                        "Content-Type": "application/json", "Content-Length": str(len(data)),
                                                        "Authorization": f"Bearer {token}"})
     r = c.getresponse()

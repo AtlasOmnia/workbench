@@ -1,7 +1,7 @@
 ---
 name: office-desktop
 description: Use for spreadsheet analysis, budget or chart work, Word menu or brief design, deck or slide creation, and when the user wants Hermes to work in a live OneNote, Excel, Word or PowerPoint document, or the Outlook on the web mailbox or calendar, shown in the Hermes Desktop preview pane. Pair once per chat, then use onenote_*/brain_*, excel_*, word_*, powerpoint_*, outlook_* or calendar_* tools and office_insert_image for pictures; undo with office_undo.
-version: 0.3.0
+version: 0.4.0
 license: Apache-2.0
 metadata:
   hermes:
@@ -81,14 +81,16 @@ If `desktop_preview` `read` reports `surface: 'iframe'`, the user is in a browse
    the user and ask them to type it into the "Workbench" task pane. Never type or
    click the code into the pane yourself (not with drive_preview either): pairing is the
    user's consent that this chat may edit this document.
-5. First time only, relay `firstTimeSetup` as given. `office_connect` has already written the
+5. First time only, relay `firstTimeSetup` as given. It includes the one-time trust step for this profile's
+   local certificate authority (`data.trust`): show the user the command and say they review and run it
+   themselves. Never run it yourself (no terminal or other tool) and never change certificate trust for them.
+   Without it Office cannot load the Workbench pane from `https://localhost`. `office_connect` has already written the
    manifests to the user's computer; tell the user the exact file in `data.manifestPath` and the
    upload path `firstTimeSetup` gives (Excel, Word, PowerPoint: Home > Add-ins > More Add-ins > My
    Add-ins > Manage My Add-ins > Upload My Add-in; OneNote: Insert > Office Add-ins > My Add-ins >
    Manage My Add-ins > Upload My Add-in; then Browse, choose that file, Upload). There is
    nothing to download: never send the user to a website for the manifest. Only when
-   `manifestPath` is absent (the folder could not be written) relay the manifest URL that
-   `firstTimeSetup` names. Excel, Word, PowerPoint: the Add-ins button does nothing for a few seconds after the
+   `manifestPath` is absent (the folder could not be written) relay what `firstTimeSetup` says instead. Excel, Word, PowerPoint: the Add-ins button does nothing for a few seconds after the
    file opens; tell the user to wait and click again. Outlook on the web shows no pin for this pane: leave out
    any "pin the pane" line.
 6. Confirm with `office_status`, then start with the overview tool for that app.

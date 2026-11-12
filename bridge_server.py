@@ -1,13 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
 """Loopback bridge between Hermes tool calls and the Office for the web task pane.
 
-The task pane (served from the configured HTTPS origin and loaded into Office for
-the web through "Upload My Add-in") reaches this server on 127.0.0.1. It is a
-transport, not an agent: it never calls Office or Microsoft services itself.
+The bridge serves HTTPS on 127.0.0.1 with this install's local TLS identity (bridge_tls.py). By default it also
+serves the task pane itself: the bundled add-in files of the pinned plugin tree (addin/, only names listed in
+addin/SHA256SUMS whose sha256 matches) under /office/live/, so the pane, loaded into Office for the web through
+"Upload My Add-in", and the bridge are one origin, https://localhost:<port>. It is a transport, not an agent: it
+never calls Office or Microsoft services itself.
 
-Security model (see README "Bridge security"):
-- binds 127.0.0.1 only; rejects any Host header that is not the literal bind;
-- every /v1 route requires Origin == the configured add-in origin (exact match);
+Security model (see docs/reference.md "Bridge security"):
+- binds 127.0.0.1 only, HTTPS only; rejects any Host header other than localhost:<bound port> (421);
+- every /v1 route requires an allowed Origin: by default one of the five Workbench loopback origins
+  https://localhost:47615-47619 (a same-origin GET carries no Origin and is accepted when Sec-Fetch-Site is absent
+  or same-origin); with a self-hosted add-in site, exactly that site's origin;
+- static files: GET/HEAD only, listed and hash-checked on every request, no symlinks, no path escapes, never
+  addin/dev (the Office.js mock), fixed MIME types, nosniff and a Content-Security-Policy;
 - a pane becomes trusted only by presenting a short-lived, single-use pairing
   code that a Hermes chat session minted (office_connect). The code is shown to
   the human in that chat and typed by the human into the pane; that is the bind
@@ -17,6 +23,7 @@ Security model (see README "Bridge security"):
 """
 from __future__ import annotations
 
+import hashlib
 import hmac
 import json
 import secrets
@@ -26,17 +33,38 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 PROTOCOL = 1
 SERVICE = "hermes-office-desktop"
 DEFAULT_PORTS = (47615, 47616, 47617, 47618, 47619)  # must match addin/shared/bridge-client.js
 # The add-in site's BASE URL is the one source of truth (plugin setting addin_base): the bridge's allowed origin
-# (scheme + host[:port]) and every manifest / task-pane / icon / support URL derive from it. Default: the GitHub Pages
-# site of AtlasOmnia/workbench. The older setting allowed_origin (an origin alone) means origin + ADDIN_PATH.
-DEFAULT_ADDIN_BASE = "https://atlasomnia.github.io/workbench/office/live/"
+# (scheme + host[:port]) and every manifest / task-pane / icon / support URL derive from it. Default: this plugin
+# serves the bundled add-in itself on its loopback HTTPS port; at runtime the base follows the port actually bound
+# (loopback_base). A self-hosted site is optional (addin_base); the older setting allowed_origin (an origin alone)
+# means origin + ADDIN_PATH.
+DEFAULT_ADDIN_BASE = "https://localhost:47615/office/live/"
 ADDIN_PATH = "/office/live/"
+SITE_ROOT = Path(__file__).resolve().parent / "addin"  # the bundled add-in; only names in SITE_ROOT/SHA256SUMS
+SITE_SUMS = "SHA256SUMS"
+STATIC_MIME_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".json": "application/json; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+}
+# The task panes' own meta policy (addin/<app>/taskpane.html), sent as a header for every static file. No
+# frame-ancestors: Office for the web frames the pane from several Microsoft hosts that differ by account type.
+STATIC_CSP = ("default-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; connect-src 'self' "
+              "https://localhost:*; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; "
+              "form-action 'none'")
+TLS_HANDSHAKE_SECONDS = 10.0
 APPS = ("excel", "word", "powerpoint", "onenote", "outlook")
 CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ"  # no 0/O/1/I/L/U
 CODE_LENGTH = 8  # 30^8 ~ 6.6e11 (~39 bits); TTL + attempt caps bound online guessing
@@ -111,6 +139,64 @@ def resolve_addin_base(addin_base=None, allowed_origin=None) -> str:
 
 
 DEFAULT_ORIGIN = origin_of(DEFAULT_ADDIN_BASE)  # derived, never configured separately
+
+
+def loopback_base(port: int) -> str:
+    """The plugin-served add-in base for the port this bridge actually bound."""
+    return f"https://localhost:{int(port)}{ADDIN_PATH}"
+
+
+def _site_sums(site: Path) -> Optional[dict]:
+    """name -> sha256 from the site's SHA256SUMS; None when it is missing or any line is malformed."""
+    try:
+        lines = (site / SITE_SUMS).read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError):
+        return None
+    out = {}
+    for line in lines:
+        digest, sep, name = line.partition("  ")
+        if not sep or not name or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            return None
+        out[name] = digest
+    return out
+
+
+def read_site_file(site: Optional[Path], encoded: str) -> Optional[tuple[bytes, str]]:
+    """(content, MIME type) of a bundled add-in file, or None. ``encoded`` is the raw path after ADDIN_PATH.
+
+    Served only when the name is listed in the site's SHA256SUMS and the file's sha256 matches it now (checked on
+    every request). Refused: encoded separators, '..', backslashes, NUL, empty or doubled separators, anything under
+    dev/ (the Office.js mock), any symlink on the way, and anything that resolves outside the site folder."""
+    if site is None or "%2f" in encoded.lower():
+        return None
+    try:
+        name = unquote(encoded, errors="strict")
+    except UnicodeDecodeError:
+        return None
+    if (not name or ".." in name or "\\" in name or "\x00" in name or name.startswith("/") or "//" in name
+            or name.split("/", 1)[0] == "dev"):
+        return None
+    sums = _site_sums(site)
+    expected = sums.get(name) if sums else None
+    if expected is None:
+        return None
+    candidate = site
+    for part in name.split("/"):
+        candidate = candidate / part
+        if candidate.is_symlink():
+            return None
+    try:
+        root = site.resolve(strict=True)
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root)
+        if not resolved.is_file():
+            return None
+        content = resolved.read_bytes()
+    except (OSError, ValueError):
+        return None
+    if not hmac.compare_digest(hashlib.sha256(content).hexdigest(), expected):
+        return None
+    return content, STATIC_MIME_TYPES.get(Path(name).suffix.lower(), "application/octet-stream")
 # Keep-alive connections that sit idle this long are closed, so an old connection can never keep a
 # released bridge reachable (must exceed POLL_WAIT_MAX: a held long-poll is not idle reading).
 CONNECTION_IDLE_SECONDS = 60
@@ -587,15 +673,28 @@ class _Handler(BaseHTTPRequestHandler):
     def bridge(self) -> "BridgeServer":
         return self.server.bridge  # type: ignore[attr-defined]
 
+    def _origin(self) -> str:
+        origins = self.headers.get_all("Origin", [])
+        if origins:
+            return origins[0] if len(origins) == 1 else ""
+        # A same-origin GET/HEAD carries no Origin header (Fetch spec). When this bridge serves the pane itself (the
+        # loopback default), such a request is the page's own origin unless the browser marks it as coming from
+        # another site. Cross-origin fetches always send Origin, so they must still match.
+        if self.command in ("GET", "HEAD") and self.bridge.loopback \
+                and self.headers.get_all("Sec-Fetch-Site", []) in ([], ["same-origin"]):
+            return f"https://localhost:{self.server.server_address[1]}"
+        return ""
+
     def _origin_ok(self) -> bool:
-        return self.headers.get("Origin", "") == self.bridge.allowed_origin
+        return self.bridge.origin_allowed(self._origin())
 
     def _host_ok(self) -> bool:
-        return self.headers.get("Host", "") == f"127.0.0.1:{self.server.server_address[1]}"
+        return self.headers.get_all("Host", []) == [f"localhost:{self.server.server_address[1]}"]
 
     def _cors(self):
-        if self._origin_ok():
-            self.send_header("Access-Control-Allow-Origin", self.bridge.allowed_origin)
+        origin = self._origin()
+        if self.bridge.origin_allowed(origin):
+            self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
 
     def _json(self, status: int, body: dict):
@@ -655,18 +754,75 @@ class _Handler(BaseHTTPRequestHandler):
         auth = self.headers.get("Authorization", "")
         return auth[7:].strip() if auth.startswith("Bearer ") else ""
 
+    def _plain(self, status: int, body: bytes = b"", mime: str = "application/octet-stream"):
+        """A static-file response: fixed headers, never CORS (the pane loads its files same-origin)."""
+        if status >= 400:
+            self.close_connection = True
+        self.send_response(status)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", STATIC_CSP)
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Cache-Control", "no-cache")
+        if status == 405:
+            self.send_header("Allow", "GET, HEAD")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def _static(self) -> bool:
+        """The bundled add-in under ADDIN_PATH (see read_site_file). False: not a static path."""
+        raw = urlsplit(self.path).path
+        if not raw.startswith(ADDIN_PATH):
+            return False
+        if not self._current():
+            return True
+        if not self._host_ok():
+            self._plain(421)
+        elif self.command not in ("GET", "HEAD"):
+            self._plain(405)
+        elif self.headers.get_all("Origin", []) and not self.bridge.origin_allowed(self._origin()):
+            self._plain(403)  # an iframe navigation or same-origin load carries none; a foreign page's fetch does
+        else:
+            item = read_site_file(self.bridge.site, raw[len(ADDIN_PATH):])
+            if item is None:
+                self._plain(404)
+            else:
+                self._plain(200, *item)
+        return True
+
     # -- routes --
     def do_OPTIONS(self):
         with self.bridge._request():
-            self._options()
+            if not self._static():
+                self._options()
 
     def do_GET(self):
         with self.bridge._request():
-            self._get()
+            if not self._static():
+                self._get()
+
+    def do_HEAD(self):
+        with self.bridge._request():
+            if not self._static():
+                self._not_allowed()
 
     def do_POST(self):
         with self.bridge._request():
-            self._post()
+            if not self._static():
+                self._post()
+
+    def do_PUT(self):
+        with self.bridge._request():
+            if not self._static():
+                self._not_allowed()
+
+    do_DELETE = do_PATCH = do_PUT
+
+    def _not_allowed(self):
+        if self._gate():
+            self._error(405, "Validation", "Method not allowed")
 
     def _options(self):
         if not self._current():
@@ -751,6 +907,7 @@ class _Handler(BaseHTTPRequestHandler):
 
 class _QuietServer(ThreadingHTTPServer):
     daemon_threads = True
+    ssl_context = None  # set by BridgeServer.ensure_started: every connection is TLS
     # W1: on Windows, SO_REUSEADDR (http.server's default) lets a second socket bind a port that another bridge is
     # already listening on: both binds succeed and either can answer the pane. Bind exclusively there, so a taken port
     # fails and ensure_started moves on to the next one. On macOS/Linux SO_REUSEADDR never shares a listening port.
@@ -760,6 +917,26 @@ class _QuietServer(ThreadingHTTPServer):
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         super().server_bind()
+
+    def get_request(self):
+        sock, address = super().get_request()
+        if self.ssl_context is not None:
+            try:  # the handshake runs in the connection's own thread (process_request_thread), never the accept loop
+                sock = self.ssl_context.wrap_socket(sock, server_side=True, do_handshake_on_connect=False)
+            except OSError:
+                sock.close()
+                raise
+        return sock, address
+
+    def process_request_thread(self, request, client_address):
+        if self.ssl_context is not None:
+            try:
+                request.settimeout(TLS_HANDSHAKE_SECONDS)
+                request.do_handshake()
+            except (OSError, ValueError):  # plain HTTP, an untrusting client, a stalled peer: drop it quietly
+                self.shutdown_request(request)
+                return
+        super().process_request_thread(request, client_address)
 
     def handle_error(self, request, client_address):  # peer resets are normal; never log request data
         return
@@ -773,12 +950,24 @@ class BridgeServer:
     request being handled) the port is given back; the registry (pairings, tokens, OneNote state) stays,
     and ``ensure_started`` takes the first free port again on the next Office tool call. The pane finds the
     bridge by its ``instance`` id on whichever port that is (addin/shared/bridge-client.js).
+
+    HTTPS only: ``tls`` is the install's bridge_tls.LocalTLS (or an ssl.SSLContext). ``allowed_origin`` None is the
+    plugin default (the bundled add-in from ``site``, origins https://localhost:<each of ports>); an https origin is a
+    self-hosted add-in site, accepted exactly.
     """
 
-    def __init__(self, allowed_origin: str = DEFAULT_ORIGIN, ports=DEFAULT_PORTS, registry: Registry | None = None,
-                 idle_release_seconds: float = IDLE_RELEASE_SECONDS, reap_interval: float = REAP_INTERVAL_SECONDS):
-        self.allowed_origin = _check_origin(allowed_origin)  # the add-in base's origin (resolve_addin_base)
+    def __init__(self, allowed_origin: str | None = None, ports=DEFAULT_PORTS, registry: Registry | None = None,
+                 idle_release_seconds: float = IDLE_RELEASE_SECONDS, reap_interval: float = REAP_INTERVAL_SECONDS,
+                 tls: Any = None, site: Path | None = None):
         self.ports = tuple(ports)
+        if allowed_origin is None:
+            self.allowed_origin = None
+            self.allowed_origins = frozenset(f"https://localhost:{p}" for p in self.ports)
+        else:
+            self.allowed_origin = _check_origin(allowed_origin)  # the add-in base's origin (resolve_addin_base)
+            self.allowed_origins = frozenset({self.allowed_origin})
+        self.tls = tls
+        self.site = Path(site) if site is not None and allowed_origin is None else None
         self.registry = registry or Registry()
         self.idle_release_seconds = float(idle_release_seconds)
         self.reap_interval = float(reap_interval)
@@ -798,6 +987,26 @@ class BridgeServer:
         httpd = self._httpd
         return httpd.server_address[1] if httpd else None
 
+    @property
+    def loopback(self) -> bool:
+        """The plugin default: the pane comes from this bridge's own port (or a sibling Workbench port)."""
+        return self.allowed_origin is None
+
+    def origin_allowed(self, origin: str) -> bool:
+        return isinstance(origin, str) and origin in self.allowed_origins
+
+    def _tls_context(self):
+        if self.tls is None:
+            raise BridgeError("TLS", "The Workbench bridge has no TLS identity configured")
+        if not hasattr(self.tls, "ensure"):
+            return self.tls
+        try:
+            return self.tls.ensure()
+        except Exception as exc:  # noqa: BLE001 - never echo parser text that might include key material
+            raise BridgeError("TLS", "Workbench could not load its local HTTPS certificate "
+                                     f"({type(exc).__name__}). Install cryptography>=43 and check this profile's "
+                                     "plugin-data/hermes-office-desktop/tls folder.") from None
+
     # --- activity that must never be cut off by a release ---------------------------------------------
     def _request(self):
         return _Counter(self, "_requests")
@@ -812,6 +1021,7 @@ class BridgeServer:
                 with self.registry._lock:
                     self.registry._touch()
                 return self.port  # type: ignore[return-value]
+            context = self._tls_context()
             last: Exception | None = None
             for port in self.ports:
                 try:
@@ -820,6 +1030,7 @@ class BridgeServer:
                     last = exc
                     continue
                 httpd.daemon_threads = True
+                httpd.ssl_context = context
                 httpd.bridge = self  # type: ignore[attr-defined]
                 with self.registry._lock:
                     self.registry._draining = False

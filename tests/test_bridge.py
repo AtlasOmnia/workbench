@@ -7,20 +7,22 @@ import time
 
 import pytest
 
+import https_client
+
 ORIGIN = "https://addin.test:8444"
 
 
 @pytest.fixture()
-def server(bridge_mod):
-    s = bridge_mod.BridgeServer(allowed_origin=ORIGIN, ports=range(18765, 18775))
+def server(bridge_mod, tls):
+    s = bridge_mod.BridgeServer(allowed_origin=ORIGIN, ports=range(18765, 18775), tls=tls)
     s.ensure_started()
     yield s
     s.stop()
 
 
 def req(server, method, path, body=None, origin=ORIGIN, token=None, host=None, ctype="application/json"):
-    c = http.client.HTTPConnection("127.0.0.1", server.port, timeout=30)
-    headers = {"Host": host or f"127.0.0.1:{server.port}"}
+    c = https_client.conn(server.port, timeout=30)
+    headers = {"Host": host or f"localhost:{server.port}"}
     if origin is not None:
         headers["Origin"] = origin
     if token:
@@ -48,8 +50,8 @@ def test_hello_requires_exact_origin_and_host(server):
 
 
 def test_preflight_answers_private_network(server):
-    c = http.client.HTTPConnection("127.0.0.1", server.port)
-    c.request("OPTIONS", "/v1/pair", headers={"Host": f"127.0.0.1:{server.port}", "Origin": ORIGIN,
+    c = https_client.conn(server.port)
+    c.request("OPTIONS", "/v1/pair", headers={"Host": f"localhost:{server.port}", "Origin": ORIGIN,
                                                "Access-Control-Request-Method": "POST",
                                                "Access-Control-Request-Private-Network": "true"})
     r = c.getresponse()
@@ -211,9 +213,9 @@ def test_repair_replaces_previous_pane(server):
 
 def test_body_limits_and_content_type(server, bridge_mod):
     assert req(server, "POST", "/v1/pair", {"code": "x"}, ctype="text/plain")[0] == 400
-    c = http.client.HTTPConnection("127.0.0.1", server.port)
+    c = https_client.conn(server.port)
     c.putrequest("POST", "/v1/pair", skip_host=True)
-    c.putheader("Host", f"127.0.0.1:{server.port}")
+    c.putheader("Host", f"localhost:{server.port}")
     c.putheader("Origin", ORIGIN)
     c.putheader("Content-Type", "application/json")
     c.putheader("Content-Length", str(bridge_mod.MAX_BODY_BYTES + 1))

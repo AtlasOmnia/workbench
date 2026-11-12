@@ -3,17 +3,20 @@
 
 Agent half of a free plugin. The user chats in Hermes Desktop; the document is open
 in Office for the web inside the Desktop preview pane; a free bridge add-in (task
-pane served from the configured add-in base URL, ``addin_base``) executes Office.js on that live document. This
-module registers the tools, the session<->pane pairing, undo, and the mutation
-approval hook. No Microsoft app registration, Graph or OAuth is used.
+pane served by this plugin's own loopback HTTPS bridge from the pinned ``addin/`` files, or from a self-hosted
+``addin_base``) executes Office.js on that live document. This module registers the tools, the session<->pane
+pairing, undo, the mutation approval hook and the ``/workbench`` command. No Microsoft app registration, Graph or
+OAuth is used.
 """
 from __future__ import annotations
 
 import hashlib
+import http.client
 import importlib.util
 import json
 import os
 import re
+import socket
 import tempfile
 import threading
 import uuid
@@ -23,11 +26,15 @@ from . import images as _img
 from . import onenote as _on
 from . import outlook as _ol
 from . import profile_scope as _scope
-from .bridge_server import (APPS, DEFAULT_PORTS, PANE_UNLOADED, PORTS_BUSY, BridgeError, BridgeServer, busy_ports,
-                            format_code, origin_of, ports_busy_message, resolve_addin_base)
+from .bridge_server import (APPS, DEFAULT_ADDIN_BASE, DEFAULT_PORTS, PANE_UNLOADED, PORTS_BUSY, SERVICE, SITE_ROOT,
+                            BridgeError, BridgeServer, busy_ports, format_code, loopback_base, origin_of,
+                            ports_busy_message, resolve_addin_base)
+from .bridge_tls import LocalTLS
 from .validation import validate
 
 HERE = Path(__file__).parent
+PLUGIN_ID = "hermes-office-desktop"
+COMMAND = "workbench"  # /workbench and `hermes workbench`: manifests for the running bridge, the trust step, status
 MANIFEST_RECORD = ".omnia-works-manifests.json"  # hashes of the manifests this plugin wrote (never a user's file)
 WEB_URLS = {"excel": "https://excel.cloud.microsoft/", "word": "https://word.cloud.microsoft/",
             "powerpoint": "https://powerpoint.cloud.microsoft/", "onenote": "https://www.onenote.com/notebooks",
@@ -91,6 +98,8 @@ HINTS = {
                  "wait); do not retry in a loop. Nothing was changed."),
     "NeedsRaster": ("Render the HTML in the browser tool, take a PNG screenshot of just that element, save it into one of "
                     "needsRaster.saveTo, then call office_insert_image again with path."),
+    "TLS": ("Tell the user the message: the bridge's local HTTPS certificate could not be prepared, so nothing was "
+            "started or changed. Do not change certificate trust yourself."),
 }
 
 _server_lock = threading.Lock()
@@ -203,9 +212,9 @@ def _refuse_if_unattended() -> None:
 
 
 def addin_base(ctx) -> str:
-    """The one source of truth: the add-in site's base URL (plugin setting addin_base, default the GitHub Pages
-    site; an older allowed_origin alone means origin + /office/live/). The manifests, the image User-Agent and every
-    URL the plugin mentions use it; the bridge's CORS origin is its origin (addin_origin)."""
+    """The one source of truth: the add-in site's base URL (plugin setting addin_base; default this plugin's own
+    loopback site, DEFAULT_ADDIN_BASE, whose port follows the bridge (served_base); an older allowed_origin alone
+    means origin + /office/live/). The manifests, the image User-Agent and every URL the plugin mentions use it."""
     if not ctx:
         return resolve_addin_base()
     return resolve_addin_base(ctx.get_config("addin_base", None), ctx.get_config("allowed_origin", None))
@@ -215,17 +224,75 @@ def addin_origin(ctx) -> str:
     return origin_of(addin_base(ctx))
 
 
+def is_loopback(ctx) -> bool:
+    """The default: the bridge serves the bundled add-in itself (no add-in site configured)."""
+    return addin_base(ctx) == DEFAULT_ADDIN_BASE
+
+
+def served_base(ctx, port: int) -> str:
+    """The base the manifests must name now: the bound port's loopback site, or the self-hosted base."""
+    return loopback_base(port) if is_loopback(ctx) else addin_base(ctx)
+
+
+def _tls_dir(ctx) -> Path:
+    """This profile's plugin data folder (the owning profile's home; never a guessed one). TLS goes to <it>/tls."""
+    return _scope.owner(ctx) / "plugin-data" / PLUGIN_ID
+
+
+def local_tls(ctx) -> LocalTLS:
+    return LocalTLS(_tls_dir(ctx))
+
+
 def get_server(ctx) -> BridgeServer:
     global _server
     with _server_lock:
         if _server is None:
-            origin = addin_origin(ctx)
+            loopback = is_loopback(ctx)
             # Fixed port set: the pane probes exactly these (no user-tunable port to drift).
             # _test_ports exists only for the unit tests' isolated ranges.
             ports = getattr(ctx, "_test_ports", None) or DEFAULT_PORTS
-            _server = BridgeServer(allowed_origin=origin, ports=tuple(ports))
+            _server = BridgeServer(allowed_origin=None if loopback else addin_origin(ctx), ports=tuple(ports),
+                                   tls=local_tls(ctx), site=SITE_ROOT if loopback else None)
             _server.registry.on_event = _on.make_event_handler(ctx)
         return _server
+
+
+class _LoopbackHTTPS(http.client.HTTPSConnection):
+    """https://localhost:<port> dialled on 127.0.0.1 (the bridge binds IPv4 loopback only); the certificate is still
+    checked for the name localhost."""
+
+    def __init__(self, port: int, context, timeout: float = 2.0):
+        super().__init__("localhost", port, timeout=timeout, context=context)
+        self._tls_context = context
+
+    def connect(self):
+        sock = socket.create_connection(("127.0.0.1", self.port), self.timeout)
+        self.sock = self._tls_context.wrap_socket(sock, server_hostname="localhost")
+
+
+def find_running_port(ctx):
+    """The port of THIS profile's running bridge, for a separate `hermes workbench` process: a hello over HTTPS that
+    trusts only this profile's CA (another profile's bridge fails the handshake). Binds and starts nothing."""
+    tls = local_tls(ctx)
+    if not tls.ca_path.is_file():
+        return None
+    try:
+        context = tls.client_context()
+    except (OSError, ValueError):
+        return None
+    for port in getattr(ctx, "_test_ports", None) or DEFAULT_PORTS:
+        conn = _LoopbackHTTPS(port, context)
+        try:
+            conn.request("GET", "/v1/hello", headers={"Origin": f"https://localhost:{port}"})
+            reply = conn.getresponse()
+            body = reply.read(4096)
+            if reply.status == 200 and json.loads(body.decode("utf-8")).get("service") == SERVICE:
+                return port
+        except (OSError, http.client.HTTPException, ValueError):
+            pass
+        finally:
+            conn.close()
+    return None
 
 
 def _reacquire(server: BridgeServer, key: str, app: str, not_paired: str) -> None:
@@ -396,11 +463,11 @@ def write_manifests(folder: Path, base: str) -> dict:
     return written
 
 
-def _manifest_for(ctx, app: str):
+def _manifest_for(ctx, app: str, base: str):
     """(absolute manifest path, where-to-find-it text), or (None, None) when the folder could not be written."""
     try:
         folder = _manifest_dir(ctx)
-        path = write_manifests(folder, addin_base(ctx)).get(app)
+        path = write_manifests(folder, base).get(app)
     except (OSError, SystemExit, ValueError):
         return None, None
     if path is None:
@@ -412,6 +479,9 @@ def _manifest_for(ctx, app: str):
 def _upload_step(ctx, app: str, path, where) -> str:
     if path is not None:
         choose = f"choose {path.name} in {where}"
+    elif is_loopback(ctx):
+        choose = (f"choose manifest-{app}.xml (the manifest folder could not be written: set manifest_dir to a "
+                  f"writable folder, then run /{COMMAND} manifest)")
     else:
         choose = (f"choose manifest-{app}.xml saved from {addin_base(ctx)}manifest-{app}.xml (the manifest folder "
                   "could not be written)")
@@ -450,18 +520,24 @@ def connect_handler(ctx):
                 port = server.ensure_started()
                 code, ttl = server.registry.mint_code(key, app, home=_scope.try_call_home(ctx))
             label, noun = LABELS[app], NOUNS[app]
-            manifest_path, where = _manifest_for(ctx, app)
+            base = served_base(ctx, port)
+            manifest_path, where = _manifest_for(ctx, app, base)
             upload = _upload_step(ctx, app, manifest_path, where)
-            setup = [upload if s is None else s for s in OUTLOOK_SETUP] if app == "outlook" else [
+            trust = _trust(server.tls)
+            setup = [x for s in OUTLOOK_SETUP for x in ((trust["step"], upload) if s is None else (s,))] \
+                if app == "outlook" else [
                     f"If the preview pane does not already show the {noun}, open {WEB_URLS[app]} there and sign in "
                     "with your Microsoft account.",
                     f"Open or create the {noun}.",
+                    trust["step"],
                     upload,
                     "Open the 'Workbench' task pane and type the pairing code.",
                     "One chat per pane: switching to another chat unloads the pane; come back and click Omnia "
                     "Works in the ribbon to reopen it."]
             return _json({"ok": True, "data": {
                 "app": app, "pairingCode": format_code(code), "expiresInSeconds": ttl, "bridge": f"127.0.0.1:{port}",
+                "addinBase": base,
+                "trust": {k: v for k, v in trust.items() if k != "step"},
                 "tellUser": (f"In the {label} task pane titled 'Workbench', enter code {format_code(code)}. "
                              "It expires in 10 minutes and works once."),
                 **({"privacy": OUTLOOK_PRIVACY} if app == "outlook" else {}),
@@ -470,6 +546,99 @@ def connect_handler(ctx):
         except BridgeError as exc:
             return _err(exc.category, str(exc))
     return handler
+
+
+def _trust(tls: LocalTLS) -> dict:
+    """The one-time manual trust step for this profile's local CA (the bridge serves https://localhost with it).
+    The plugin never runs the command; the user reviews and runs it."""
+    command = tls.trust_command()
+    return {"caCertificate": str(tls.ca_path), "command": command, "tellUser": tls.trust_instructions(),
+            "step": ("Once per Hermes profile, before the first upload: trust Workbench's local certificate authority "
+                     "so Office can load the pane from https://localhost. The user reviews and runs this command "
+                     f"themselves (never run it for them): {command}")}
+
+
+def _manifests_text(ctx, base: str) -> str:
+    folder = _manifest_dir(ctx)
+    written = write_manifests(folder, base)
+    lines = [f"Workbench add-in manifests for {base}:"]
+    lines += [f"- {LABELS[app]}: {written[app]}" for app in APPS if app in written]
+    kept = [LABELS[app] for app in APPS if app not in written]
+    if kept:
+        lines.append("- not written (both file names hold your own edited files): " + ", ".join(kept))
+    lines.append("Upload the one for your app once: Office for the web > Add-ins > My Add-ins > Upload My Add-in "
+                 "(Outlook: Get add-ins > My add-ins > Add a custom add-in > Add from File).")
+    return "\n".join(lines)
+
+
+def _status_text(ctx, port) -> str:
+    tls = local_tls(ctx)
+    site = (f"served by this plugin from its pinned add-in files ({loopback_base(port) if port else DEFAULT_ADDIN_BASE}"
+            f"{'' if port else ', port follows the bridge'})" if is_loopback(ctx) else addin_base(ctx) + " (self-hosted)")
+    return "\n".join([
+        "Workbench:",
+        f"- bridge: {'https://localhost:' + str(port) if port else 'not running'}",
+        f"- add-in site: {site}",
+        f"- local CA: {tls.ca_path}{'' if tls.ca_path.is_file() else ' (created when the bridge first starts)'}",
+        f"Usage: /{COMMAND} [manifest|trust|status]"])
+
+
+def workbench_command(ctx):
+    """/workbench [manifest|trust|status], in the process that runs this profile's bridge."""
+    def handler(raw_args: str = "") -> str:
+        words = (raw_args or "").split()
+        verb = words[0].lower() if words else "status"
+        try:
+            if verb == "manifest":
+                server = get_server(ctx)
+                port = None
+                if is_loopback(ctx):
+                    with server.in_use():
+                        port = server.ensure_started()
+                return _manifests_text(ctx, served_base(ctx, port)) + "\n\n" + server.tls.trust_instructions()
+            if verb == "trust":
+                tls = local_tls(ctx)
+                tls.ensure()
+                return tls.trust_instructions()
+            if verb == "status":
+                return _status_text(ctx, _server.port if _server else None)
+            return f"Usage: /{COMMAND} [manifest|trust|status]: write the add-in manifests, show the trust step, status."
+        except (BridgeError, OSError, ValueError, ImportError) as exc:
+            return f"Workbench: {exc}"
+    return handler
+
+
+def _cli_setup(subparser) -> None:
+    subparser.add_argument("action", nargs="?", default="status", choices=["status", "trust", "manifest"],
+                           help="status, the local CA trust step, or write the add-in manifests for the running bridge")
+
+
+def cli_handler(ctx):
+    """`hermes workbench ...`: a separate process. It never starts a bridge; it finds this profile's running one."""
+    def run(args) -> int:
+        action = getattr(args, "action", None) or "status"
+        try:
+            if action == "trust":
+                tls = local_tls(ctx)
+                tls.ensure()
+                print(tls.trust_instructions())
+                return 0
+            port = find_running_port(ctx) if is_loopback(ctx) else None
+            if action == "manifest":
+                if is_loopback(ctx) and port is None:
+                    print("Workbench: no Workbench bridge of this Hermes profile is running. Ask Hermes to connect an "
+                          f"Office app (office_connect starts the bridge and writes the manifests), or run /{COMMAND} "
+                          "manifest in a chat.")
+                    return 1
+                print(_manifests_text(ctx, served_base(ctx, port)))
+                print(local_tls(ctx).trust_instructions())
+                return 0
+            print(_status_text(ctx, port))
+            return 0
+        except (BridgeError, OSError, ValueError, ImportError) as exc:
+            print(f"Workbench: {exc}")
+            return 1
+    return run
 
 
 def status_handler(ctx):
@@ -1111,6 +1280,13 @@ def register(ctx):
                           handler=factory(ctx, schema["name"], schema["parameters"]),
                           check_fn=lambda: True, override=False, description=schema["description"])
     ctx.register_hook("pre_tool_call", approval_gate)
+    if hasattr(ctx, "register_command"):
+        ctx.register_command(COMMAND, workbench_command(ctx), description=(
+            "Workbench: write the Office add-in manifests for the running bridge, show the one-time local "
+            "certificate trust step, or status"), args_hint="[manifest|trust|status]")
+    if hasattr(ctx, "register_cli_command"):
+        ctx.register_cli_command(name=COMMAND, help="Workbench: add-in manifests for the running bridge, the local "
+                                 "certificate trust step, status", setup_fn=_cli_setup, handler_fn=cli_handler(ctx))
     if hasattr(ctx, "register_skill"):
         for skill in ("office-desktop", "daily-note", "meeting-to-decisions"):
             skill_md = HERE / "skills" / skill / "SKILL.md"

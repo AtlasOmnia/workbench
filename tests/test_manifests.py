@@ -102,9 +102,10 @@ def test_every_app_names_its_own_manifest(make, manifest_home):
     assert OLD_HOST not in json.dumps(d) and d["manifestPath"].endswith("manifest-outlook.xml")
 
 
-def test_default_base_is_the_pages_site(make, manifest_home):
+def test_default_base_is_the_plugin_served_site(make, manifest_home):
     connect(make({}))
-    assert "https://atlasomnia.github.io/workbench/office/live/excel/taskpane.html" in \
+    assert "https://localhost:" in (manifest_home / "manifest-excel.xml").read_text(encoding="utf-8")
+    assert "/office/live/excel/taskpane.html" in \
         (manifest_home / "manifest-excel.xml").read_text(encoding="utf-8")
 
 

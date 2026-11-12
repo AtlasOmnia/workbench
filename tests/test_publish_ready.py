@@ -23,11 +23,13 @@ def test_catalog_and_manifest_keep_identity_and_enable_both_platforms():
 def test_public_origin_smoke_is_explicitly_pending_and_complete():
     readme = (ROOT / "README.md").read_text()
     evidence = (ROOT / "docs/live-evidence.md").read_text()
-    sentence = "Live runs used a private add-in site; the public GitHub Pages origin is first exercised at publication"
+    sentence = ("Live runs used a private add-in site; the plugin-served add-in (the default since 0.4.0) is not "
+                "live-tested yet")
     assert sentence in readme and sentence in evidence
     smoke = evidence.split("### Post-publish smoke test", 1)[1].split("## F7", 1)[0]
     for needle in ("clean Hermes profile", "leave `addin_base` and `allowed_origin` unset", "connect Excel",
-                   "person type", "one cell write", "`office_undo`", "not run yet"):
+                   "person type", "one cell write", "`office_undo`", "not run yet", "/workbench trust",
+                   "https://localhost:<port>/office/live/"):
         assert needle in smoke
     assert 'folder name "Omnia Works"' in readme and "before the rename" in readme
 

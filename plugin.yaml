@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 name: hermes-office-desktop
-version: 0.3.0
+version: 0.4.0
 manifest_version: 2
 author: Atlas Omnia
 license: Apache-2.0
@@ -9,7 +9,13 @@ description: >-
   Desktop while the live OneNote, Excel, Word or PowerPoint for the web document in the Desktop
   preview pane changes as Hermes works. OneNote pages feed a local index (links, backlinks,
   cited answers, decisions) that becomes an Excel tracker, a Word brief and a short deck. A free
-  bridge add-in (Upload My Add-in) runs Office.js; no Microsoft app registration, Graph or OAuth.
+  bridge add-in (Upload My Add-in) runs Office.js; no Microsoft app registration, Graph or OAuth. The plugin
+  serves that add-in itself from its pinned files over HTTPS on https://localhost:47615-47619 (only files listed in
+  addin/SHA256SUMS with a matching sha256); trust its local certificate authority once with the command it prints
+  (the plugin never changes OS trust). /workbench manifest or hermes workbench manifest writes the add-in manifests;
+  a self-hosted addin_base stays optional.
+python_dependencies:
+  - "cryptography>=43"
 requires_hermes: ">=0.22.5"
 platforms: [macos, windows]  # Windows: one real Hermes Desktop session passed the 5-prompt story on 2026-11-10 with a single profile.
 tags: [office, onenote, excel, word, powerpoint, desktop, preview, second-brain]
@@ -105,9 +111,9 @@ provides_hooks:
 config_schema:
   addin_base:
     type: str
-    default: "https://atlasomnia.github.io/workbench/office/live/"
+    default: "https://localhost:47615/office/live/"
     label: "Add-in site"
-    description: "Base URL of the add-in site (https, ending in /). The manifests, task panes and support page come from here, and the bridge accepts requests only from its origin (scheme and host)."
+    description: "Default: the add-in bundled with this plugin, served by its own bridge on https://localhost (the port follows the bridge; the bridge then accepts only Workbench's loopback origins). To self-host, set your own https base URL ending in /: the manifests, task panes and support page come from there, and the bridge accepts requests only from its origin (scheme and host)."
   allowed_origin:
     type: str
     default: ""
@@ -117,7 +123,7 @@ config_schema:
     type: str
     default: ""
     label: "Add-in manifest folder"
-    description: "Absolute folder (~ allowed) where office_connect writes the five add-in manifests for allowed_origin. Empty: ~/Documents/Omnia Works/add-in manifests. A manifest you edited is never overwritten."
+    description: "Absolute folder (~ allowed) where office_connect writes the five add-in manifests for the add-in site. Empty: ~/Documents/Omnia Works/add-in manifests. A manifest you edited is never overwritten."
   image_dirs:
     type: list
     default: []

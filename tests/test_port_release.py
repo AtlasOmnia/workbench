@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pytest
 
+import https_client
+
 hermes_constants = pytest.importorskip("hermes_constants")
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -69,6 +71,7 @@ def _load_copy(name):
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
+    mod._tls_dir = lambda ctx=None: https_client.DATA  # one test CA for every profile copy (TLS is tested elsewhere)
     return mod
 
 
@@ -128,8 +131,8 @@ def world(tmp_path, monkeypatch):
 
 # --- the pane, over real HTTP ---------------------------------------------------------------------------
 def req(port, method, path, body=None, token=None, conn=None):
-    c = conn or http.client.HTTPConnection("127.0.0.1", port, timeout=10)
-    headers = {"Origin": ORIGIN, "Host": f"127.0.0.1:{port}"}
+    c = conn or https_client.conn(port, timeout=10)
+    headers = {"Origin": ORIGIN, "Host": f"localhost:{port}"}
     data = None
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -380,7 +383,7 @@ def test_a_lingering_keep_alive_connection_cannot_reach_a_released_bridge(world)
     clock, make = world
     a, b = make(2)
     port, _ = connect(a)
-    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    conn = https_client.conn(port, timeout=10)
     assert req(port, "GET", "/v1/hello", conn=conn)[0] == 200  # keep-alive connection, accepted by A
     clock.t += 601
     assert a.release() is True
@@ -396,7 +399,7 @@ def test_a_lingering_keep_alive_connection_cannot_reach_a_released_bridge(world)
 
 def test_reaper_thread_releases_an_idle_bridge_and_it_starts_again(bridge_mod):
     s = bridge_mod.BridgeServer(allowed_origin=ORIGIN, ports=range(19960, 19963), idle_release_seconds=0.3,
-                                reap_interval=0.05)
+                                reap_interval=0.05, tls=https_client.local_tls())
     try:
         port = s.ensure_started()
         assert _until(lambda: s.releases == 1, 5)
@@ -411,7 +414,8 @@ def test_a_port_another_bridge_listens_on_is_never_bound_a_second_time(bridge_mo
     succeeded, and either could answer the pane). A taken port must fail the bind: the next bridge takes the next port,
     and once every port is taken it says PortsBusy."""
     ports = (19963, 19964)
-    a, b, c = (bridge_mod.BridgeServer(allowed_origin=ORIGIN, ports=ports, reap_interval=0) for _ in range(3))
+    a, b, c = (bridge_mod.BridgeServer(allowed_origin=ORIGIN, ports=ports, reap_interval=0, tls=https_client.local_tls())
+               for _ in range(3))
     try:
         assert a.ensure_started() == 19963
         assert b.ensure_started() == 19964

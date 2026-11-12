@@ -3,9 +3,11 @@
 // bridge on 127.0.0.1, pair with a one-time code the user reads from their
 // Hermes chat, then long-poll for commands and post results.
 //
-// Network: only http://127.0.0.1:<47615-47619>. Chromium Local Network Access
-// treats this as a public->loopback request; `targetAddressSpace: 'loopback'`
-// lets the browser show (or, in an embedder, auto-resolve) the permission.
+// Network: only https://localhost:<47615-47619>, the plugin's loopback bridge (HTTPS with the Hermes profile's
+// local CA, which the user trusts once). By default this pane is served by that same bridge, so its own port is
+// same-origin; another of the five ports, or a pane from a self-hosted site, is a CORS request the bridge checks
+// by Origin. From a self-hosted (public) page, Chromium Local Network Access treats this as a public->loopback
+// request; `targetAddressSpace: 'loopback'` lets the browser show (or, in an embedder, auto-resolve) the permission.
 //
 // Reconnect: the pane token is kept in sessionStorage (this tab only, cleared
 // when the tab closes) so reloading the pane resumes the same chat binding
@@ -90,7 +92,7 @@ export class BridgeClient {
     if (!this.storage) return null
     try {
       const v = JSON.parse(this.storage.getItem(this.key) || 'null')
-      if (v && typeof v.token === 'string' && typeof v.base === 'string' && /^http:\/\/127\.0\.0\.1:\d+$/.test(v.base)) return v
+      if (v && typeof v.token === 'string' && typeof v.base === 'string' && /^https:\/\/localhost:\d+$/.test(v.base)) return v
     } catch { /* ignore */ }
     return null
   }
@@ -100,7 +102,7 @@ export class BridgeClient {
     const found = []
     this.instances = new Map()
     for (const port of this.ports) {
-      const base = `http://127.0.0.1:${port}`
+      const base = `https://localhost:${port}`
       try {
         const { status, body } = await this._json(`${base}/v1/hello`, { method: 'GET' }, this.probeTimeoutMs)
         if (status === 200 && body && body.service === 'hermes-office-desktop' && body.protocol === PROTOCOL &&

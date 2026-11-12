@@ -1,7 +1,7 @@
 ---
 name: daily-note
 description: Use when the user asks to start today's note or a daily page in OneNote. Creates one dated page from this template, linked to the pages they mention, through onenote_create_page and brain_links.
-version: 0.3.0
+version: 0.4.0
 license: Apache-2.0
 metadata:
   hermes:

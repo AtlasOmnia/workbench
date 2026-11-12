@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """F3 (A24): ONE source of truth for the add-in BASE URL.
 
-Setting ``addin_base`` (default the GitHub Pages site) gives the bridge's allowed origin (scheme + host[:port]) and every
+Setting ``addin_base`` (default the plugin-served loopback site) gives the bridge's allowed origin (scheme + host[:port]) and every
 manifest / task-pane / icon / support URL. The older ``allowed_origin`` setting still works: an origin alone means
 base = origin + "/office/live/" (the private test profiles use exactly that).
 """
@@ -15,8 +15,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-PAGES = "https://atlasomnia.github.io/workbench/office/live/"
-PAGES_ORIGIN = "https://atlasomnia.github.io"
+PAGES = "https://atlasomnia.github.io/workbench/office/live/"  # the optional, manual-only Pages site
+LOOPBACK = "https://localhost:47615/office/live/"  # the default: the bundled add-in, served by the bridge
+LOOPBACK_ORIGIN = "https://localhost:47615"
 STUDIO = "https://studio.example.test"
 PREFIXED = "https://addin.example.test:8443/team/tools/office/live/"
 SLUG = "AtlasOmnia/workbench"
@@ -76,11 +77,11 @@ def connect(ctx, app="excel"):
 
 
 # ---- resolution ----------------------------------------------------------------------------------------------------
-def test_default_base_is_the_pages_site_and_the_origin_derives_from_it(plugin, bridge_mod):
-    assert bridge_mod.DEFAULT_ADDIN_BASE == PAGES
-    assert bridge_mod.DEFAULT_ORIGIN == PAGES_ORIGIN
-    assert bridge_mod.resolve_addin_base() == PAGES
-    assert plugin.addin_base(Ctx({})) == PAGES and plugin.addin_origin(Ctx({})) == PAGES_ORIGIN
+def test_default_base_is_the_loopback_site_and_the_origin_derives_from_it(plugin, bridge_mod):
+    assert bridge_mod.DEFAULT_ADDIN_BASE == LOOPBACK
+    assert bridge_mod.DEFAULT_ORIGIN == LOOPBACK_ORIGIN
+    assert bridge_mod.resolve_addin_base() == LOOPBACK
+    assert plugin.addin_base(Ctx({})) == LOOPBACK and plugin.addin_origin(Ctx({})) == LOOPBACK_ORIGIN
 
 
 def test_origin_alone_keeps_working(plugin, bridge_mod):
@@ -99,7 +100,7 @@ def test_path_prefixed_base_gives_scheme_host_port_origin(plugin, bridge_mod):
         plugin.addin_base(Ctx({"addin_base": PREFIXED, "allowed_origin": STUDIO}))
     assert e.value.category == "Configuration"
     # the default value written out explicitly does not override an older allowed_origin profile
-    assert plugin.addin_base(Ctx({"addin_base": PAGES, "allowed_origin": STUDIO})) == STUDIO + "/office/live/"
+    assert plugin.addin_base(Ctx({"addin_base": LOOPBACK, "allowed_origin": STUDIO})) == STUDIO + "/office/live/"
 
 
 @pytest.mark.parametrize("bad", ["http://x.test/office/live/", "https://x.test/office/live", "https://x.test/a/?q=1",
@@ -119,15 +120,18 @@ def test_bad_origins_are_refused(bridge_mod, bad):
 def test_bridge_origin_check_uses_the_derived_origin(plugin, make):
     ctx = make({"addin_base": PREFIXED})
     assert plugin.get_server(ctx).allowed_origin == "https://addin.example.test:8443"
-    ctx = make({}, port=19950)
-    assert plugin.get_server(ctx).allowed_origin == PAGES_ORIGIN
+    ctx = make({}, port=19950)  # the default: the five loopback origins of its own ports, nothing else
+    server = plugin.get_server(ctx)
+    assert server.allowed_origin is None and server.loopback
+    assert server.allowed_origins == frozenset(f"https://localhost:{p}" for p in range(19950, 19955))
 
 
-def test_default_profile_manifests_point_at_the_pages_site(make, manifest_home):
-    connect(make({}))
+def test_default_profile_manifests_point_at_the_bridge_itself(make, manifest_home):
+    d = connect(make({}))
     xml = (manifest_home / "manifest-excel.xml").read_text(encoding="utf-8")
-    assert f'<SourceLocation DefaultValue="{PAGES}excel/taskpane.html"/>' in xml
-    assert f"<AppDomain>{PAGES_ORIGIN}</AppDomain>" in xml and OLD_HOST not in xml
+    base = "https://localhost:19940/office/live/"  # the port this bridge bound (make's first test port)
+    assert d["addinBase"] == base and f'<SourceLocation DefaultValue="{base}excel/taskpane.html"/>' in xml
+    assert "<AppDomain>https://localhost:19940</AppDomain>" in xml and OLD_HOST not in xml and "github.io" not in xml
 
 
 def test_prefixed_base_manifests_written_by_office_connect(make, manifest_home):
@@ -165,19 +169,20 @@ def test_build_addin_output_for_path_prefixed_bases(tmp_path, base):
 
 def test_build_addin_default_base_is_the_bridge_default():
     import ast
-    assert _build_addin().DEFAULT_BASE == PAGES
+    assert _build_addin().DEFAULT_BASE == LOOPBACK
     tree = ast.parse((ROOT / "scripts" / "build_addin.py").read_text(encoding="utf-8"))
     literals = [n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)]
-    assert PAGES not in literals  # loaded from bridge_server.py (one source), not a second literal
+    assert LOOPBACK not in literals  # loaded from bridge_server.py (one source), not a second literal
 
 
 def test_image_user_agent_names_the_base_support_page(plugin, bridge_mod):
     images = sys.modules["hermes_office_desktop.images"]
     assert images.user_agent(PREFIXED) == f"HermesOfficeDesktop (office_insert_image; +{PREFIXED}support.html)"
-    assert images.USER_AGENT == f"HermesOfficeDesktop (office_insert_image; +{PAGES}support.html)"
+    # the loopback default's support page is unreachable from an image host: the public repository instead
+    assert images.USER_AGENT == f"HermesOfficeDesktop (office_insert_image; +https://github.com/{SLUG})"
 
 
-# ---- repo: no retired host, one slug, the Pages workflow ------------------------------------------------------------
+# ---- repo: no retired host, one slug, the optional Pages workflow ------------------------------------------------------------
 def _tracked():
     """Every file of this tree: git's list in a checkout; every file (no caches) in an export (git archive), so the
     check never passes vacuously on an export inside some other repository."""
@@ -220,11 +225,11 @@ def test_one_repo_slug_everywhere():
     assert (ROOT / "plugin.yaml").read_text(encoding="utf-8").startswith("# SPDX-License-Identifier: Apache-2.0\nname: hermes-office-desktop\n")
 
 
-def test_pages_workflow_builds_the_pages_base_with_pinned_actions():
+def test_pages_workflow_builds_the_optional_pages_base_by_hand_with_pinned_actions():
     from ruamel.yaml import YAML
     wf = YAML(typ="safe").load((ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8"))
     on = wf.get("on", wf.get(True))
-    assert set(on) == {"push", "workflow_dispatch"} and on["push"] == {"branches": ["main"]}
+    assert set(on) == {"workflow_dispatch"}  # never redeployed on push: the default add-in is the plugin's own
     steps = [s for job in wf["jobs"].values() for s in job.get("steps", [])]
     uses = [s["uses"] for s in steps if "uses" in s]
     assert uses and all(re.fullmatch(r"[\w.-]+/[\w.-]+@[0-9a-f]{40}", u) for u in uses), uses

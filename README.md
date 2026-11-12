@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Workbench by Atlas Omnia (0.3.0)
+# Workbench by Atlas Omnia (0.4.0)
 
 Open and edit Word, Excel, PowerPoint, OneNote and Outlook in a Hermes Desktop tab, with your agent working alongside you.
 
@@ -69,8 +69,10 @@ Hermes Desktop on macOS or Windows must run on the gateway machine. Upload once 
    For a new file, click Blank workbook, Blank document or Blank presentation.
 3. **Sign in to your Microsoft account** on Microsoft's own page, in the pane. The plugin never sees your password.
    If you land on the Microsoft 365 home instead of the app, Hermes opens the app's direct link for you.
-4. **Upload the add-in once per app.** Nothing to download: the first "connect to <app>" writes the five manifests
-   (`manifest-excel.xml`, `-word`, `-powerpoint`, `-onenote`, `-outlook`, for your add-in site) to
+4. **Trust once, then upload the add-in once per app.** The plugin serves the add-in from its pinned files on
+   `https://localhost`; the first "connect to <app>" shows the command that trusts its local certificate
+   authority, which you run yourself. It also writes the five manifests (`manifest-excel.xml`, `-word`,
+   `-powerpoint`, `-onenote`, `-outlook`) to
    **Documents > Omnia Works > add-in manifests** (plugin setting `manifest_dir` to change it; a file you edited is
    never overwritten, Hermes writes `manifest-<app> (Omnia Works).xml` beside it), and Hermes tells you the path:
    * **Excel, Word, PowerPoint:** Home > Add-ins > More Add-ins > Manage My Add-ins (on the My Add-ins tab) >
@@ -134,6 +136,7 @@ Hermes Desktop on macOS or Windows must run on the gateway machine. Upload once 
   attendees, never saves an event and never sends an invitation.
 * **Five profiles per gateway share the bridge ports** (`127.0.0.1:47615-47619`); idle profiles release theirs
   after 10 minutes.
+* **After 10 idle minutes** reopening Workbench may show Office's add-in error: ask Hermes to connect first.
 * **Use the direct links** — the Microsoft 365 app launcher opens new windows, which the pane blocks.
 * **All your Office panes can share one chat.** Switching to another chat unloads them; reopen Workbench from the
   ribbon to pair again.
@@ -144,21 +147,18 @@ Hermes Desktop on macOS or Windows must run on the gateway machine. Upload once 
 
 ## Privacy and safety, in short
 
-* The bridge listens on `127.0.0.1` only and accepts only the add-in's origin plus a single-use code you type,
+* The bridge listens on `127.0.0.1` only (HTTPS) and accepts only the add-in's origin plus a single-use code you type,
   then a per-pane token. No Microsoft app registration, OAuth or Graph; the plugin reads no credentials and has
   no telemetry.
 * Every edit asks for Hermes approval; scheduled, webhook and API-server runs are refused outright, reads too.
 * OneNote pages you open while paired are indexed, unencrypted, in this profile's `brain.db`; delete it to forget.
 * The only outbound request is fetching an image URL you ask Hermes to insert (public HTTPS addresses only,
   4 MiB, PNG/JPEG).
-* The add-in's task pane is served from the add-in site (plugin setting `addin_base`, default
-  `https://atlasomnia.github.io/workbench/office/live/`, GitHub Pages built from this repository by
-  `.github/workflows/pages.yml`), outside the catalog pin; each release publishes a `SHA256SUMS` you can rebuild with
-  `scripts/build_addin.py`. Self-hosting: set `addin_base` to your own site.
+* The task pane comes from the plugin: only pinned `addin/` files matching `addin/SHA256SUMS`.
 
 Full disclosures, the bridge's security, every tool and how it fits together: [docs/reference.md](docs/reference.md).
 
-Live runs used a private add-in site; the public GitHub Pages origin is first exercised at publication.
+Live runs used a private add-in site; the plugin-served add-in (the default since 0.4.0) is not live-tested yet.
 
 ## More
 

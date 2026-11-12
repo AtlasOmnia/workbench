@@ -53,7 +53,9 @@ def ssh_hello(mac: str, origin: str, ports=BRIDGE_PORTS, runner=subprocess.run) 
     One ssh call, one curl per port, one line of output each."""
     if isinstance(ports, int):
         ports = (ports,)
-    curls = "; ".join(f"curl -s -m5 -H 'Origin: {origin}' http://127.0.0.1:{p}/v1/hello; echo" for p in ports)
+    # HTTPS since 0.4.0. -k: a hello probe only (no token or document data); the client Mac's curl does not have the
+    # profile's local CA file, and the pane itself verifies the certificate.
+    curls = "; ".join(f"curl -s -k -m5 -H 'Origin: {origin}' https://localhost:{p}/v1/hello; echo" for p in ports)
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", mac, curls]
     try:
         out = runner(cmd, capture_output=True, timeout=60)

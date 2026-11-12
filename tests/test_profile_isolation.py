@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+import https_client
+
 hermes_constants = pytest.importorskip("hermes_constants")
 pytest.importorskip("plugins.plugin_storage")
 
@@ -46,6 +48,7 @@ def _load_copy(name):
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
+    mod._tls_dir = lambda ctx=None: https_client.DATA  # one test CA for every profile copy
     return mod
 
 
@@ -73,9 +76,9 @@ def _rows(db, sql):
 
 def _post_event(server, token, body):
     port = server.port
-    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    c = https_client.conn(port, timeout=10)
     data = json.dumps(body).encode()
-    c.request("POST", "/v1/event", body=data, headers={"Origin": ORIGIN, "Host": f"127.0.0.1:{port}",
+    c.request("POST", "/v1/event", body=data, headers={"Origin": ORIGIN, "Host": f"localhost:{port}",
                                                        "Content-Type": "application/json",
                                                        "Content-Length": str(len(data)),
                                                        "Authorization": f"Bearer {token}"})

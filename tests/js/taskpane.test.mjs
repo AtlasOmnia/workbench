@@ -42,8 +42,12 @@ test('activity lines are readable and every error says what to do next (critic2 
 })
 
 test('pane footer shows the loaded build honestly (critic2 #7)', () => {
-  assert.deepEqual(BUILD, { version: null, build: null, commit: null, dirty: null }) // unbuilt checkout placeholder
-  assert.equal(buildLabel(), 'Workbench add-in · unbuilt source (dev)')
+  // The committed bundle (scripts/build_addin.py --bundle): version and content id, no commit (cannot name itself).
+  assert.equal(BUILD.version, '0.4.0')
+  assert.match(BUILD.build, /^[0-9a-f]{12}$/)
+  assert.equal(BUILD.commit, null)
+  assert.equal(buildLabel(), `Workbench add-in 0.4.0 · build ${BUILD.build} · source unknown`)
+  assert.equal(buildLabel({ version: null, build: null, commit: null, dirty: null }), 'Workbench add-in · unbuilt source (dev)')
   assert.equal(buildLabel({ version: '0.3.0', build: 'a1b2c3d4e5f6', commit: 'e404f5b0a1b2', dirty: false }),
     'Workbench add-in 0.3.0 · build a1b2c3d4e5f6 · source e404f5b0a1b2')
   assert.equal(buildLabel({ version: '0.3.0', build: 'a1b2c3d4e5f6', commit: 'e404f5b0a1b2', dirty: true }),
