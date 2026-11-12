@@ -540,6 +540,8 @@ that followed is recorded in the next section.
     `needsRaster.saveTo` paths; three check the macOS-only live harness (`bash -n` of a Windows path, and
     `live_driver.py` naming files with `\` where the archive uses `/`); one sets a 1 ns mtime that NTFS stores as 0
     (100 ns resolution); one sets `HOME`, which Windows `~` expansion ignores (it uses `USERPROFILE`).
+    Since fixed in the tests and in `live_driver.py`, with LF line endings pinned in `.gitattributes` for the
+    hashed schema copies and the shell scripts: the current unit suites pass on Windows (unit tests only).
   * 2 (`tests/test_port_release.py`) show a **real Windows defect**, confirmed directly: two bridges in one process both
     bound `127.0.0.1:47615`. Python's `http.server` sets `SO_REUSEADDR`, and on Windows that lets a second socket
     bind a port that is already listening, so a second Hermes profile would share 47615 instead of taking

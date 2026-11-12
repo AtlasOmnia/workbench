@@ -2,3 +2,7 @@
 # The bridge serves addin/ only when each file's sha256 matches addin/SHA256SUMS. Check these files out with LF on
 # every OS: Git for Windows (core.autocrlf=true) would otherwise write CRLF and every text file would be refused.
 addin/** text=auto eol=lf
+# Byte-for-byte copies whose SHA-256 is pinned (tests/test_plugin.py): LF in every checkout, Windows included.
+schemas/*.json text eol=lf
+# Shell scripts: bash cannot parse CRLF line endings.
+*.sh text eol=lf

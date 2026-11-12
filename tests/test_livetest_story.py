@@ -422,7 +422,8 @@ def test_run_macbook_story_mode_passes_story_to_the_driver():
     sh = (LIVE / "run_macbook.sh").read_text()
     assert 'story) HOSTS=""; F3=(); STORY=(--story) ;;' in sh
     assert '${STORY[@]+"${STORY[@]}"}' in sh
-    out = subprocess.run(["bash", "-n", str(LIVE / "run_macbook.sh")], capture_output=True, text=True)
+    # a relative path: on Windows `bash` may be WSL's, which cannot open a D:\ path
+    out = subprocess.run(["bash", "-n", "run_macbook.sh"], cwd=LIVE, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     src = (LIVE / "live_driver.py").read_text()
     assert 'ap.add_argument("--story"' in src and "story_once(client, pane, n, rec, manifests, bare=a.bare)" in src
