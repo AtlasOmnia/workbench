@@ -1538,7 +1538,8 @@ def _executor_read(title, blocks):
           f"installOneNoteMock(new MockNotebook({{ name: 'N', sections: [{{ name: 'S', pages: [{{ title: {json.dumps(title)}, "
           f"html: {json.dumps(blocks)} }}] }}] }}))\n"
           "console.log(JSON.stringify(await execute('get_page', {})))\n")
-    out = subprocess.run([node, "--input-type=module", "-e", js], capture_output=True, text=True, timeout=60)
+    out = subprocess.run([node, "--input-type=module", "-e", js], capture_output=True, text=True, encoding="utf-8",
+                         timeout=60)
     assert out.returncode == 0, out.stderr
     res = json.loads(out.stdout.strip().splitlines()[-1])
     assert res["ok"] is True, res

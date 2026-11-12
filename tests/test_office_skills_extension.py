@@ -12,16 +12,17 @@ def test_excel_design_bundle_via_real_registration(plugin, tmp_path):
     dest = tmp_path / "relocated"; shutil.copytree(entry.parent, dest)
     for ref in ["excel-workflow.md", "design-playbook.md", "provenance.md"]:
         rel = "references/" + ref
-        assert "](" + rel + ")" in entry.read_text()
+        assert "](" + rel + ")" in entry.read_text(encoding="utf-8")
         assert rel in _plugin_skill_linked_files(dest)["references"]
         reply = json.loads(_serve_skill_file(dest, rel, "hermes-office-desktop:office-desktop"))
         assert reply["success"]
-        assert reply["content"] == (entry.parent / rel).read_text()
-    text = (dest / "references/excel-workflow.md").read_text()
-    names = {s["name"] for s in json.loads((ROOT / "schemas/excel.json").read_text())}
+        assert reply["content"] == (entry.parent / rel).read_text(encoding="utf-8")
+    text = (dest / "references/excel-workflow.md").read_text(encoding="utf-8")
+    names = {s["name"] for s in json.loads((ROOT / "schemas/excel.json").read_text(encoding="utf-8"))}
     assert set(re.findall(r"\bexcel_[a-z_]+\b", text)) <= names
     for word in ["formulas", "currency", "assumptions", "reconciliation", "trendlines", "axes"]: assert word in text
-    for word in ["spreadsheet", "menu", "deck"]: assert word in entry.read_text().split("version:")[0].lower()
+    head = entry.read_text(encoding="utf-8").split("version:")[0].lower()
+    for word in ["spreadsheet", "menu", "deck"]: assert word in head
 
 
 def test_actual_host_metadata_routes_ordinary_requests(tmp_path):

@@ -13,7 +13,7 @@ W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 R = "http://schemas.openxmlformats.org/package/2006/relationships"
 D = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 def template():
-    text = REF.read_text()
+    text = REF.read_text(encoding="utf-8")
     assert "STATIC" in text and "not host-tested" in text
     return re.search(r"```xml\n(.*?)\n```", text, re.S).group(1)
 def lint(xml):
@@ -87,7 +87,7 @@ def test_bad_example_variants(kind):
     with pytest.raises((AssertionError, ET.ParseError)): lint(xml)
 
 def test_guidance_operational_contract():
-    text = REF.read_text()
+    text = REF.read_text(encoding="utf-8")
     for phrase in ["COMPLETE Flat OPC", "never a bare fragment", "UTF-16", "20,000", "location", "REPLACES", "styles.xml", "single root", "sectPr"]: assert phrase in text
     if WB:
         for phrase in ["255", "5,000", "debugInfo", "elapsedMs", "roundTripMs", "newest-first", "PRECEDED"]: assert phrase in text

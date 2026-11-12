@@ -3,10 +3,10 @@ from pathlib import Path
 ROOT = next(p for p in Path(__file__).resolve().parents if (p / "plugin.yaml").exists() or (p / "plugins").exists())
 def test_research_reconciliation_contract():
     refs = ROOT / 'skills/office-desktop/references'
-    design = (refs / "design-playbook.md").read_text()
+    design = (refs / "design-playbook.md").read_text(encoding="utf-8")
     for phrase in ["claim → evidence", "keyboard", "blocker", "microtype", "CSS pixels"]: assert phrase in design
-    text = (refs / "excel-workflow.md").read_text()
+    text = (refs / "excel-workflow.md").read_text(encoding="utf-8")
     for phrase in ["ReportedPL", "IncludeInPL", "Tolerance", "SUMIFS", "cash or accrual", "5,000 cells"]: assert phrase in text
     assert "registration excludes" in text
-    ppt = (refs / "powerpoint-design.md").read_text()
+    ppt = (refs / "powerpoint-design.md").read_text(encoding="utf-8")
     assert "office_insert_image" in ppt and "diagnostic-only" in ppt

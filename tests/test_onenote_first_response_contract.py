@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def _read(rel):
-    return " ".join((ROOT / rel).read_text().split())
+    return " ".join((ROOT / rel).read_text(encoding="utf-8").split())
 
 
 def test_first_response_contract_is_in_the_open_flow_before_pairing():

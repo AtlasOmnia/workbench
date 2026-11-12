@@ -318,7 +318,7 @@ def test_connect_binds_that_chat_per_app_and_routes_undo(plugin, app, tool, cano
 
 
 def test_plugin_holds_no_credentials():
-    files = {p.name: p.read_text() for p in ROOT.glob("*.py")}
+    files = {p.name: p.read_text(encoding="utf-8") for p in ROOT.glob("*.py")}
     text = "\n".join(files.values())
     for forbidden in (".env", "auth.json", "get_secret", "os.environ"):
         assert forbidden not in text
@@ -328,7 +328,7 @@ def test_plugin_holds_no_credentials():
     assert not any(x in files["bridge_tls.py"] for x in ("subprocess", "ctypes", "os.system", "popen("))
     # The only environment reads are the two non-secret Hermes session markers.
     assert set(re.findall(r"os\.getenv\(([^,)]+)", text)) == {"name"}
-    init = (ROOT / "__init__.py").read_text()
+    init = (ROOT / "__init__.py").read_text(encoding="utf-8")
     assert set(re.findall(r'_session_marker\("([A-Z_]+)"\)', init)) == {"HERMES_CRON_SESSION", "HERMES_SESSION_PLATFORM"}
 
 
@@ -507,7 +507,7 @@ def test_display_name_is_omnia_works_and_ids_are_unchanged(plugin, tmp_path):
     ui = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ui)
     for app, label in labels.items():
-        xml = (site / f"manifest-{app}.xml").read_text()
+        xml = (site / f"manifest-{app}.xml").read_text(encoding="utf-8")
         assert f"<Id>{ids[app]}</Id>" in xml  # changing an add-in id would orphan installed add-ins
         assert f'<DisplayName DefaultValue="Workbench for {label}"/>' in xml
         desc = re.search(r'<Description DefaultValue="([^"]*)"', xml).group(1)
@@ -515,15 +515,15 @@ def test_display_name_is_omnia_works_and_ids_are_unchanged(plugin, tmp_path):
         button = re.search(r'<bt:String id="Hermes.Button.Label" DefaultValue="([^"]*)"', xml).group(1)
         assert button == "Workbench" and ui.RIBBON_LABELS[0] == button  # the harness clicks what Office shows
         assert "Hermes Desktop for" not in xml and "Office Desktop" not in xml
-        html = (site / app / "taskpane.html").read_text()
+        html = (site / app / "taskpane.html").read_text(encoding="utf-8")
         assert f"<title>Workbench for {label}</title>" in html and "<h1>Workbench</h1>" in html and descriptor in html
     assert plugin.PRODUCT == "Workbench" and plugin.PRODUCT in _chat_hints()
-    cat = (ROOT / "catalog" / "hermes-office-desktop.yaml").read_text()
+    cat = (ROOT / "catalog" / "hermes-office-desktop.yaml").read_text(encoding="utf-8")
     assert 'name: hermes-office-desktop\ntitle: "Workbench by Atlas Omnia"' in cat
-    man = (ROOT / "plugin.yaml").read_text()
+    man = (ROOT / "plugin.yaml").read_text(encoding="utf-8")
     assert man.startswith("# SPDX-License-Identifier: Apache-2.0\nname: hermes-office-desktop\n") and "Workbench by Atlas Omnia — " + descriptor in man
-    assert (ROOT / "README.md").read_text().splitlines()[1] == "# Workbench by Atlas Omnia (0.4.0)"
-    assert "Copyright 2026 Atlas Omnia" in (ROOT / "NOTICE").read_text()  # legal author unchanged
+    assert (ROOT / "README.md").read_text(encoding="utf-8").splitlines()[1] == "# Workbench by Atlas Omnia (0.4.0)"
+    assert "Copyright 2026 Atlas Omnia" in (ROOT / "NOTICE").read_text(encoding="utf-8")  # legal author unchanged
 
 
 def test_outlook_manifest_is_a_mailapp_with_read_and_compose_and_no_send_permission(tmp_path):

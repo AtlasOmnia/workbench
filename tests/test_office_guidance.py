@@ -20,7 +20,7 @@ def test_registered_plugin_bundle_serves_linked_reference(plugin, tmp_path, name
     plugin.register(ctx)
     registered = ctx.skills["office-desktop"]
     target = "references/" + name
-    assert f"]({target})" in registered.read_text()
+    assert f"]({target})" in registered.read_text(encoding="utf-8")
     relocated = tmp_path / "bundle/skills/office-desktop"
     shutil.copytree(registered.parent, relocated)
     serving = pytest.importorskip("tools.skills_tool_plugin")
@@ -28,22 +28,22 @@ def test_registered_plugin_bundle_serves_linked_reference(plugin, tmp_path, name
     assert target in linked["references"]
     reply = json.loads(serving._serve_skill_file(relocated, target, "hermes-office-desktop:office-desktop"))
     assert reply["success"] is True
-    assert reply["content"] == (registered.parent / target).read_text()
+    assert reply["content"] == (registered.parent / target).read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("name", REFS)
 def test_guidance_is_portable_and_names_only_registered_tools(name):
-    text = (SKILL.parent / "references" / name).read_text()
+    text = (SKILL.parent / "references" / name).read_text(encoding="utf-8")
     assert not re.search(r"/Users/|[A-Z]:\\\\|(?:https?://)?[\w.-]+\.ts\.net|127\.0\.0\.1|localhost", text)
     assert not re.search(r"https?://(?!schemas\.|www\.w3\.org/)[^\s`<>]+", text)
     tools = {s["name"] for host in ("word", "powerpoint")
-             for s in json.loads((ROOT / f"schemas/{host}.json").read_text())}
+             for s in json.loads((ROOT / f"schemas/{host}.json").read_text(encoding="utf-8"))}
     assert set(re.findall(r"\b(?:word|powerpoint)_[a-z_]+\b", text)) <= tools
     assert "native-host" in text and "readback" in text
 
 
 def test_word_design_selection_and_recovery_contract():
-    text = (SKILL.parent / "references" / REFS[0]).read_text()
+    text = (SKILL.parent / "references" / REFS[0]).read_text(encoding="utf-8")
     for phrase in ("native text/style", "Title", "Heading 1", "Normal", "spacing", "palette",
                    "word_read_selection", "word_get_document_structure", "current selection",
                    "start", "end", "selection", "FIRST failed OOXML insertion", "stop",
@@ -54,7 +54,7 @@ def test_word_design_selection_and_recovery_contract():
 
 
 def test_ooxml_contract_and_evidence_boundary():
-    text = (SKILL.parent / "references" / REFS[0]).read_text()
+    text = (SKILL.parent / "references" / REFS[0]).read_text(encoding="utf-8")
     for phrase in ("Word document XML", "Flat OPC", "pkg:package", "w:document", "w:body",
                    "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
                    "http://schemas.microsoft.com/office/2006/xmlPackage",
@@ -75,12 +75,12 @@ def test_powerpoint_design_uses_supported_layout_and_formatting():
 
 
 def test_static_native_text_example_matches_current_schema(plugin):
-    text = (SKILL.parent / "references" / REFS[0]).read_text()
+    text = (SKILL.parent / "references" / REFS[0]).read_text(encoding="utf-8")
     match = re.search(r"```json\n(.*?)\n```", text, re.S)
     assert match is not None
     example = json.loads(match.group(1))
     from hermes_office_desktop import validation
-    schema = next(s for s in json.loads((ROOT / "schemas/word.json").read_text())
+    schema = next(s for s in json.loads((ROOT / "schemas/word.json").read_text(encoding="utf-8"))
                   if s["name"] == example["tool"])
     validation.validate(example["arguments"], schema["parameters"])
     assert example["arguments"]["location"] == "end"
@@ -88,8 +88,9 @@ def test_static_native_text_example_matches_current_schema(plugin):
 
 
 def test_static_ooxml_example_matches_current_schema(plugin):
-    text = (SKILL.parent / "references" / REFS[0]).read_text()
+    text = (SKILL.parent / "references" / REFS[0]).read_text(encoding="utf-8")
     xml = re.search(r"```xml\n(.*?)\n```", text, re.S).group(1)
     from hermes_office_desktop import validation
-    schema = next(s for s in json.loads((ROOT / "schemas/word.json").read_text()) if s["name"] == "word_insert_ooxml")
+    schema = next(s for s in json.loads((ROOT / "schemas/word.json").read_text(encoding="utf-8"))
+                  if s["name"] == "word_insert_ooxml")
     validation.validate({"ooxml": xml, "location": "end"}, schema["parameters"])
