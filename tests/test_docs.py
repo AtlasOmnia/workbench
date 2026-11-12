@@ -14,7 +14,7 @@ def _slug(heading: str) -> str:  # GitHub's anchor rule, enough for these headin
 
 def test_readme_is_short_and_starts_with_the_one_sentence():
     text = (ROOT / "README.md").read_text()
-    assert len(text.encode()) < 13 * 1024  # A34: +1 KiB for the real-Desktop first-connect steps and limits
+    assert len(text.encode()) < 14 * 1024  # A34: +1 KiB first-connect steps and limits; 0.4.0: +1 KiB approvals note
     lines = text.splitlines()
     assert lines[1] == "# Workbench by Atlas Omnia (0.4.0)" and lines[2] == ""
     assert lines[3] == ("Open and edit Word, Excel, PowerPoint, OneNote and Outlook in a Hermes Desktop tab, with your "

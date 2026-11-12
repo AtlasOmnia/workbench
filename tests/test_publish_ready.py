@@ -23,8 +23,9 @@ def test_catalog_and_manifest_keep_identity_and_enable_both_platforms():
 def test_public_origin_smoke_is_explicitly_pending_and_complete():
     readme = (ROOT / "README.md").read_text()
     evidence = (ROOT / "docs/live-evidence.md").read_text()
-    sentence = ("Live runs used a private add-in site; the plugin-served add-in (the default since 0.4.0) is not "
-                "live-tested yet")
+    sentence = ("The plugin-served add-in (the default since 0.4.0) passed one live Excel run on macOS (2026-11-12); "
+                "other apps and Windows are not live-tested with it yet")
+    assert "is not live-tested yet" not in readme + evidence
     assert sentence in readme and sentence in evidence
     smoke = evidence.split("### Post-publish smoke test", 1)[1].split("## F7", 1)[0]
     for needle in ("clean Hermes profile", "leave `addin_base` and `allowed_origin` unset", "connect Excel",

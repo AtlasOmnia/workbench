@@ -184,3 +184,12 @@ def test_onenote_opening_uses_observed_my_files_not_sharing_onboarding():
     readme = " ".join(_read("README.md").split())
     assert "Pair only once it loads here" in readme
     assert "Only My Files window-opening is user-confirmed" in readme
+
+
+def test_readme_says_how_to_stop_approval_prompts_and_what_yolo_gives_up():
+    """The README offers "always for this session" first (destructive tools keep asking) and says plainly that
+    /yolo turns off every approval in the chat, those included."""
+    readme = " ".join(_read("README.md").split())
+    safety = readme.split("## Privacy and safety", 1)[1]
+    assert "always for this session" in safety and "can't be undone still ask" in safety
+    assert "`/yolo` turns off every approval in that chat" in safety and "Hermes' own command approvals" in safety

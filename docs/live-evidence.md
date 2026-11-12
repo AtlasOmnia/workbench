@@ -9,9 +9,16 @@ medians; this page keeps the per-run detail. How the harness works: [harness.md]
 0.4.0 stops defaulting to a GitHub Pages site: the bridge serves the pinned `addin/` files itself over HTTPS on
 `https://localhost:<port>/office/live/` with a per-profile local CA. Tested in unit and integration tests only
 (`tests/test_addin_served.py`, plus a throwaway bridge process that served every `SHA256SUMS`-listed file over HTTPS,
-verified against its generated CA, and refused the rest). **Not live-tested:** Office for the web loading the pane
-from `https://localhost` in Hermes Desktop needs the one-time CA trust and a Microsoft sign-in by a person; it has not
-been run on macOS or Windows yet. The runs below used earlier builds and a private add-in site.
+verified against its generated CA, and refused the rest).
+
+**One live run, Excel on macOS, 2026-11-12, commit `fe3d97a`** (real Hermes Desktop, not the harness; the plugin
+copied from a `git archive` of that commit into an existing test profile, `addin_base` unset). A person ran the
+printed trust command, uploaded the generated `manifest-excel.xml` and typed the pairing code; Excel for the web
+(OfficeOnline 16.0.20709.42309) loaded the pane from the bridge on `https://localhost`. `office_status`: paired and
+live. Workbook overview 398 ms and a range read 310 ms round trip; a one-cell write to A1 (undo available);
+`office_undo`; a read back showed A1 blank. That is one run of one app. **Not live-tested with the plugin-served
+add-in:** Word, PowerPoint, OneNote, Outlook, Windows, and a clean-profile `hermes plugins install` (the smoke test
+below). The runs below used earlier builds and a private add-in site.
 
 ## Current: F8 `402f00e` (A45/A46)
 
@@ -33,7 +40,7 @@ the F8 story includes its reply write/undo, not a new standalone calendar matrix
 F7 below is historical evidence, not the shipped runtime. Source: A45-report.md and A46-report.md
 (private overnight evidence reports); no F8 timing medians were supplied there.
 
-Live runs used a private add-in site; the plugin-served add-in (the default since 0.4.0) is not live-tested yet.
+Earlier live runs used a private add-in site. The plugin-served add-in (the default since 0.4.0) passed one live Excel run on macOS (2026-11-12); other apps and Windows are not live-tested with it yet.
 
 ### Post-publish smoke test (owner; not run yet)
 

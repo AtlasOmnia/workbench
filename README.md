@@ -151,6 +151,9 @@ Hermes Desktop on macOS or Windows must run on the gateway machine. Upload once 
   then a per-pane token. No Microsoft app registration, OAuth or Graph; the plugin reads no credentials and has
   no telemetry.
 * Every edit asks for Hermes approval; scheduled, webhook and API-server runs are refused outright, reads too.
+* Tired of approving every edit? Choose "always for this session" on the first prompt: ordinary edits stop asking,
+  while deletes and other changes that can't be undone still ask. `/yolo` turns off every approval in that chat,
+  including those and Hermes' own command approvals, so use it only on documents you can afford to lose.
 * OneNote pages you open while paired are indexed, unencrypted, in this profile's `brain.db`; delete it to forget.
 * The only outbound request is fetching an image URL you ask Hermes to insert (public HTTPS addresses only,
   4 MiB, PNG/JPEG).
@@ -158,7 +161,7 @@ Hermes Desktop on macOS or Windows must run on the gateway machine. Upload once 
 
 Full disclosures, the bridge's security, every tool and how it fits together: [docs/reference.md](docs/reference.md).
 
-Live runs used a private add-in site; the plugin-served add-in (the default since 0.4.0) is not live-tested yet.
+Earlier live runs used a private add-in site. The plugin-served add-in (the default since 0.4.0) passed one live Excel run on macOS (2026-11-12); other apps and Windows are not live-tested with it yet.
 
 ## More
 
