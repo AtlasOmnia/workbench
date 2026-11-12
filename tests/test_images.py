@@ -359,7 +359,11 @@ def test_swap_to_symlink_after_the_check_is_refused(images, home, tmp_path, monk
     assert swapped and e.value.category == "Blocked"
 
 
-def test_swap_to_a_fifo_or_directory_after_the_check_is_refused(images, home, monkeypatch):
+@pytest.mark.parametrize("kind", [
+    pytest.param("fifo", marks=pytest.mark.skipif(not hasattr(os, "mkfifo"),
+                                                  reason="Windows has no FIFOs (no os.mkfifo); the directory case runs")),
+    "directory"])
+def test_swap_to_a_fifo_or_directory_after_the_check_is_refused(images, home, monkeypatch, kind):
     f = home / "cache" / "images" / "ok.png"
     f.write_bytes(PNG)
     real_resolve = images.Path.resolve
@@ -368,7 +372,10 @@ def test_swap_to_a_fifo_or_directory_after_the_check_is_refused(images, home, mo
         out = real_resolve(self, strict=strict)
         if out == real_resolve(f) and f.is_file():
             f.unlink()
-            os.mkfifo(f)
+            if kind == "fifo":
+                os.mkfifo(f)
+            else:
+                f.mkdir()
         return out
     monkeypatch.setattr(images.Path, "resolve", resolve)
     with pytest.raises(images.ImageError) as e:

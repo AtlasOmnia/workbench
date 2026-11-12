@@ -113,9 +113,9 @@ def test_idempotent_no_rewrite(make, manifest_home):
     ctx = make({"allowed_origin": ORIGIN})
     connect(ctx)
     before = {p.name: p.stat().st_mtime_ns for p in manifest_home.iterdir()}
-    os.utime(manifest_home / "manifest-word.xml", ns=(1, 1))
+    os.utime(manifest_home / "manifest-word.xml", ns=(10**9, 10**9))  # 1 s: NTFS keeps 100 ns ticks (1 ns reads as 0)
     connect(ctx)
-    assert (manifest_home / "manifest-word.xml").stat().st_mtime_ns == 1  # unchanged content is not rewritten
+    assert (manifest_home / "manifest-word.xml").stat().st_mtime_ns == 10**9  # unchanged content is not rewritten
     after = {p.name: p.stat().st_mtime_ns for p in manifest_home.iterdir()}
     assert set(after) == set(before)
 
@@ -145,6 +145,7 @@ def test_origin_change_replaces_plugin_written_files(make, manifest_home):
 
 def test_configured_manifest_dir_with_tilde(make, tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows expands ~ from USERPROFILE, not HOME
     d = connect(make({"allowed_origin": ORIGIN, "manifest_dir": "~/Desk/manifests"}))
     want = tmp_path / "Desk" / "manifests" / "manifest-excel.xml"
     assert d["manifestPath"] == str(want) and want.is_file()
