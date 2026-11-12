@@ -420,3 +420,10 @@ def test_pages_workflow_is_manual_only():
     wf = YAML(typ="safe").load((ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8"))
     on = wf.get("on", wf.get(True))
     assert set(on) == {"workflow_dispatch"}
+
+
+def test_addin_files_are_checked_out_as_lf_on_every_os():
+    """Git for Windows (core.autocrlf=true) would otherwise write CRLF: every text file's sha256 would differ from
+    SHA256SUMS and the bridge would refuse the whole add-in (404)."""
+    rules = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+    assert "addin/** text=auto eol=lf" in rules

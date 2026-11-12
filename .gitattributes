@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+# The bridge serves addin/ only when each file's sha256 matches addin/SHA256SUMS. Check these files out with LF on
+# every OS: Git for Windows (core.autocrlf=true) would otherwise write CRLF and every text file would be refused.
+addin/** text=auto eol=lf
