@@ -104,7 +104,7 @@ def plugin_dir_matches(commit, plugin_dir, archive=None):
     root = Path(plugin_dir)
     if not root.is_dir():
         return {"match": False, "why": f"no plugin dir at {root}"}
-    have = {str(p.relative_to(root)): p for p in root.rglob("*")
+    have = {p.relative_to(root).as_posix(): p for p in root.rglob("*")  # archive names use "/"
             if p.is_file() and "__pycache__" not in p.relative_to(root).parts}
     missing = sorted(set(want) - set(have))
     extra = sorted(set(have) - set(want))
@@ -158,12 +158,12 @@ def learned_state(home):
     memory file. Recorded at the start and the end of a run, so a skill or memory written mid-run shows."""
     home = Path(home)
     skills = home / "skills"
-    names = sorted(str(p.parent.relative_to(skills)) for p in skills.rglob("SKILL.md")
+    names = sorted(p.parent.relative_to(skills).as_posix() for p in skills.rglob("SKILL.md")
                    if not any(part.startswith(".") for part in p.relative_to(skills).parts)) if skills.is_dir() else []
     mem = home / "memories"
     files = sorted(p.name for p in mem.glob("*.md")) if mem.is_dir() else []
     pend = home / "pending"
-    staged = sorted(str(p.relative_to(pend)) for p in pend.rglob("*") if p.is_file()) if pend.is_dir() else []
+    staged = sorted(p.relative_to(pend).as_posix() for p in pend.rglob("*") if p.is_file()) if pend.is_dir() else []
     return {"skills": names, "memoryFiles": files, "pendingWrites": staged}
 
 

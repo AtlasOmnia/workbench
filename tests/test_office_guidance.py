@@ -25,7 +25,7 @@ def test_registered_plugin_bundle_serves_linked_reference(plugin, tmp_path, name
     shutil.copytree(registered.parent, relocated)
     serving = pytest.importorskip("tools.skills_tool_plugin")
     linked = serving._plugin_skill_linked_files(relocated)
-    assert target in linked["references"]
+    assert Path(target) in [Path(p) for p in linked["references"]]  # Hermes lists them with the OS separator
     reply = json.loads(serving._serve_skill_file(relocated, target, "hermes-office-desktop:office-desktop"))
     assert reply["success"] is True
     assert reply["content"] == (registered.parent / target).read_text(encoding="utf-8")

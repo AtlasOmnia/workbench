@@ -842,7 +842,7 @@ def test_html_for_excel_and_powerpoint_needs_raster(plugin, tool, app):
     nr = out["needsRaster"]
     assert nr["app"] == app and nr["then"]["tool"] == "office_insert_image" and nr["then"]["args"]["app"] == app
     assert "path" in nr["then"]["args"] and any("screenshot" in s.lower() for s in nr["steps"])
-    assert any(d.endswith("cache/screenshots") for d in nr["saveTo"])
+    assert any(d.endswith(os.path.join("cache", "screenshots")) for d in nr["saveTo"])  # native paths
     assert pane.seen == []
     gate = ctx.hooks["pre_tool_call"]
     assert gate(tool_name="office_insert_image", args={"app": app, "html": "<p/>"}, session_id="chat-1") is None

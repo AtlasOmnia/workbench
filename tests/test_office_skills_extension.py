@@ -13,7 +13,7 @@ def test_excel_design_bundle_via_real_registration(plugin, tmp_path):
     for ref in ["excel-workflow.md", "design-playbook.md", "provenance.md"]:
         rel = "references/" + ref
         assert "](" + rel + ")" in entry.read_text(encoding="utf-8")
-        assert rel in _plugin_skill_linked_files(dest)["references"]
+        assert Path(rel) in [Path(p) for p in _plugin_skill_linked_files(dest)["references"]]  # OS separator
         reply = json.loads(_serve_skill_file(dest, rel, "hermes-office-desktop:office-desktop"))
         assert reply["success"]
         assert reply["content"] == (entry.parent / rel).read_text(encoding="utf-8")
