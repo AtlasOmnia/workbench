@@ -40,9 +40,10 @@ a safe new chat with a blank active preview tab and no notebook link in its cont
 1. Send only `open OneNote tab`. Record the prompt, loaded skill/tool calls, tab-open result,
    observed landing controls, and the FIRST assistant response after opening, not a later troubleshooting turn.
 2. Pass only if that response says the **tab** opened (not that a notebook is ready), asks which
-   notebook the user wants, and, when My Files is observed, immediately guides: click My Files for
-   a separate window, open the notebook there, copy its final browser address, paste into the Workbench
-   OneNote tab's address bar, then connect only after it loads here. No default notebook creation,
+   notebook the user wants, says up front that clicking a notebook in the list opens a window the pane
+   blocks, and, when My Files is observed, immediately guides: click My Files for a separate window, open
+   the notebook there, copy its final browser address, paste it into the chat so Hermes opens it in the
+   Workbench OneNote tab, then connect only after it loads here. No default notebook creation,
    sharing/permission detour, or premature `office_connect`. If opening/sign-in fails or My Files is
    absent/different, inspect and report that actual state; do not claim a nonexistent control or successful route.
    A notebook name already supplied must not be asked again; an already open notebook skips onboarding.
@@ -50,18 +51,21 @@ a safe new chat with a blank active preview tab and no notebook link in its cont
    separately; do not infer compliance from a static test or a warm ongoing chat.
 4. Coordinate with the user for manual selection and paste; do not compete for the mouse. He clicks My Files,
    opens the notebook in the separate window, copies its final opened-notebook browser address (not the
-   file-list address, an `onenote:` app link, or a sharing link), and pastes it into the Workbench tab.
+   file-list address, an `onenote:` app link, or a sharing link), and pastes it into the chat; Hermes opens it in
+   the Workbench OneNote tab.
    Record each step separately. `desktop_preview` `read` must confirm the actual notebook loaded inside
    Workbench before `office_connect` and user-entered pairing code. The external notebook alone is insufficient.
-5. If paste fails, record the actual error/visible state without exposing private URL identifiers. Offer only
-   a fallback verified for that error; otherwise report the blocker. Never automatically revert to sharing
-   instructions or change permissions. No popup/security/window-management changes are part of this check.
+5. If the pasted link does not open the notebook, record the actual error/visible state without exposing private
+   URL identifiers. Offer only a fallback verified for that error; otherwise report the blocker. Never
+   automatically revert to sharing instructions or change permissions. No popup/security/window-management
+   changes are part of this check.
 6. Record first-response and follow-up outcomes separately for each demo target. Evidence so far:
    only My Files opening a separate window is user-confirmed; open/copy/paste/pair is not end-to-end proven.
    The intentional My Files window differs from previously blocked direct notebook-list clicks, not evidence
    that all new windows are blocked or allowed. No model response has been observed by the offline contract tests.
    Proposed recording checklist: first response → observed My Files → manual external notebook open → final-address
-   copy → Workbench paste → verified notebook load here → user pairing. This is a checklist, not a completed take.
+   copy → paste into the chat → Hermes opens it in the OneNote tab → verified notebook load here → user pairing. This
+   is a checklist, not a completed take.
 
 ## Live testing on Windows desktop Office (no deploy, no sign-in)
 

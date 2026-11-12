@@ -25,18 +25,21 @@ story-bare`; results are in [live-evidence.md](live-evidence.md)).
   email). If the email is not in the Inbox, search All folders (it may be archived).
 * OneNote: the first response confirms the tab opened and asks which notebook you want (unless you named it),
   then guides the observed My Files route; it does not create one by default. Confirm My Files is visible
-  before recommending it. You click My Files, open the notebook in its separate window, copy the final
-  opened-notebook browser address, and paste it into the Workbench OneNote tab's address bar. Not the file-list
-  address, an `onenote:` app link, or a sharing link. Pair only after the notebook loads inside Workbench.
+  before recommending it. Clicking a notebook in the list tries to open a new window, which the pane blocks.
+  You click My Files, open the notebook in its separate window, copy the final opened-notebook browser address,
+  and paste it into the chat; Hermes opens it in the Workbench OneNote tab. Not the file-list address, an
+  `onenote:` app link, or a sharing link. Pair only after the notebook loads inside Workbench.
   Only My Files opening a separate window is user-confirmed, not end-to-end open/copy/paste/pair success.
-  If My Files is absent, inspect/report the current page; if paste fails, capture the actual error and use only
-  a verified fallback. Never automatically fall back to sharing/permission changes. Already open notebook:
-  skip onboarding. For the first-response check, see [harness.md](harness.md#onenote-first-response-acceptance-manual-fresh-chat).
+  If My Files is absent, inspect/report the current page; if the pasted link does not open the notebook,
+  capture the actual error and use only a verified fallback. Never automatically fall back to sharing/permission
+  changes. Already open notebook: skip onboarding. For the first-response check, see
+  [harness.md](harness.md#onenote-first-response-acceptance-manual-fresh-chat).
 * Proposed OneNote recording checklist: after concurrent smoke work finishes and in a safe chat, verify the
   first response, then let the user perform My Files selection, external notebook opening, final-address copy,
-  and Workbench paste; do not compete for the mouse. Record each step separately, then confirm the notebook
-  loaded here before the user enters a pairing code. Stop on an absent control or paste error; record the
-  actual state, not a successful take. Do not present this checklist as completed recording evidence.
+  and the paste into the chat (Hermes opens it here); do not compete for the mouse. Record each step separately,
+  then confirm the notebook loaded here before the user enters a pairing code. Stop on an absent control or a
+  pasted link that does not open; record the actual state, not a successful take. Do not present this checklist
+  as completed recording evidence.
 * Excel: no cell may be in editing mode (press Esc), or Excel refuses the tracker.
 * Click the Hermes chat box before typing each prompt: an Office app, the Outlook reply editor most of all, can keep
   the keyboard, and your words would land in the document.

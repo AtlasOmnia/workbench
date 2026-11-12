@@ -503,6 +503,12 @@ def _upload_step(ctx, app: str, path, where) -> str:
     return f"{start} > My Add-ins > Manage My Add-ins > Upload My Add-in > Browse, {choose}, then Upload."
 
 
+# W4: a notebook clicked in OneNote's notebook list tries to open a new window, which the Desktop pane blocks; the
+# route that works goes through My Files and the chat.
+ONENOTE_OPEN = ("Open the notebook in the OneNote tab. Clicking a notebook in the notebook list tries to open a new "
+                "window, which the pane blocks; instead click My Files (it opens in a separate window), open the "
+                "notebook there, copy its link from that window's address bar and paste it into the chat: Hermes opens "
+                "it in the OneNote tab.")
 OUTLOOK_SETUP = [
     f"If the preview pane does not already show your mailbox, open {WEB_URLS['outlook']} there and sign in.",
     None,  # the upload step: _upload_step(ctx, "outlook", ...)
@@ -537,7 +543,7 @@ def connect_handler(ctx):
                 if app == "outlook" else [
                     f"If the preview pane does not already show the {noun}, open {WEB_URLS[app]} there and sign in "
                     "with your Microsoft account.",
-                    f"Open or create the {noun}.",
+                    ONENOTE_OPEN if app == "onenote" else f"Open or create the {noun}.",
                     trust["step"],
                     upload,
                     "Open the 'Workbench' task pane and type the pairing code.",

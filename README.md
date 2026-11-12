@@ -124,10 +124,10 @@ Hermes Desktop on macOS or Windows must run on the gateway machine. Upload once 
   title, and every answer says how many pages it has indexed.
 * **Outlook reply and new drafts open as pop-outs, which the pane blocks.** You click Reply and open Workbench in
   the draft (Message > Apps); Hermes fills it in, and refuses while the pane is still on the email.
-* **OneNote:** The first response confirms the tab opened and asks which notebook. If My Files is visible,
-  click it for a separate window, open the notebook there, then paste its final browser address into this
-  tab. Pair only once it loads here. Only My Files window-opening is user-confirmed; the full flow is
-  not yet verified live in Hermes Desktop.
+* **OneNote:** The first response confirms the tab opened and asks which notebook. A list click opens a
+  blocked window: click My Files (a separate window), open the notebook, paste its address in the chat;
+  Hermes opens it here. Pair only once it loads here. Only My Files window-opening is user-confirmed; the
+  full flow is not yet verified live in Hermes Desktop.
 * **Excel refuses changes while you edit a cell.** Press Esc or click a cell. With five panes Excel can be slow;
   Hermes reads the workbook before retrying an uncertain change.
 * **After Hermes restarts, pair every pane again** (pairings live in memory). A pane stuck on "Hermes is working…":

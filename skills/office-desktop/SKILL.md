@@ -60,10 +60,13 @@ If `desktop_preview` `read` reports `surface: 'iframe'`, the user is in a browse
    user to find the app.
 3. OneNote first-open contract: for "open OneNote tab" / "Open OneNote" with no notebook link,
    after the tab opens, the FIRST assistant response must immediately confirm only the tab opened,
-   ask which notebook the user wants, and give the observed My Files route. When My Files is visible, say:
-   "Opened the OneNote tab. Which notebook would you like to use? Click My Files to open the file browser
-   in a separate window, open your notebook there, then copy its browser address and paste it into this
-   OneNote tab’s address bar. Once the notebook opens here, we’ll connect it to Hermes."
+   ask which notebook the user wants, and give the observed My Files route up front, in plain words (a
+   notebook clicked in the list tries to open a new window, which the pane blocks, and the user is stuck).
+   When My Files is visible, say:
+   "Opened the OneNote tab. Which notebook would you like to use? Clicking a notebook in this list tries
+   to open a new window, which this pane blocks. Instead, click My Files (it opens in a separate window),
+   open your notebook there, copy its link from that window’s address bar and paste it here in the chat.
+   I’ll open it in this OneNote tab, then we’ll connect it to Hermes."
    Do not ask for the notebook name again if the user supplied it; use their name in this guidance.
    If the actual notebook is already open, skip onboarding and proceed to pairing.
    Do not claim My Files exists without observing it (read the tab; inspect visible controls with
@@ -241,21 +244,22 @@ from what the user asked for:
   open/copy/paste/pair flow has not been observed end to end. Do not generalize to all new windows.
   Give the FIRST assistant response in Flow step 3, adapted to the observed state, then:
   1. If you already have the final opened-notebook browser address (a prior notebook/page URL or
-     one the user supplied), use `desktop_preview` `open` in the OneNote tab, or let the user paste
-     it into that tab's address bar. Use the final opened-notebook browser address,
+     one the user pasted into the chat), open it yourself with `desktop_preview` `open` in the OneNote tab
+     (read first: it must be the active tab). Use the final opened-notebook browser address,
      not a file-list address, an `onenote:` app link, or a sharing link. A notebook name alone is not a URL.
   2. Otherwise, once My Files is observed, the user clicks My Files, opens their notebook in the separate
-     file-browser window, copies the final browser address AFTER the notebook opens, and pastes it into
-     the Workbench OneNote tab's address bar. Let the user control selection and paste; do not compete for
+     file-browser window, copies its link (the browser address AFTER the notebook opens) and pastes it into
+     the chat; then you open it as in 1. Let the user control selection and copying; do not compete for
      the mouse or try to manage the separate window. If needed, coach one step at a time and wait for
      confirmation. No OneDrive search/Share/Copy-link onboarding is needed for this route.
-  3. After the paste, `desktop_preview` `read` must confirm the actual notebook has loaded in Workbench
+  3. After you open it, `desktop_preview` `read` must confirm the actual notebook has loaded in Workbench
      (a OneNote notebook/page URL and loaded notebook, not just the landing/file list). Then keep that URL
      and start pairing with `office_connect {"app": "onenote"}` and the usual pairing-code steps
      (the user enters the code; never you). No pairing at tab-open or while only the external notebook is open.
-  4. If paste fails, capture the actual error and the visible state (redact private URL identifiers in
-     reports), then offer only a verified fallback for that error. If none is verified, report the blocker
-     and ask the user for the missing observation; do not invent success or retry through another route.
+  4. If the pasted link does not open the notebook, capture the actual error and the visible state (redact
+     private URL identifiers in reports), then offer only a verified fallback for that error. If none is
+     verified, report the blocker and ask the user for the missing observation; do not invent success or
+     retry through another route.
      Never automatically revert to sharing instructions. Never change permissions or create a sharing link,
      and never ask the user to do so.
   5. Only if the user explicitly asks to create a notebook: on the notebooks start page,
