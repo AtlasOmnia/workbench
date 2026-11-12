@@ -471,8 +471,9 @@ def test_notebook_identity_is_sent_with_every_command(world):
     assert all(a.get("expectNotebookId") == "nb-north" for _, a in world.pane.seen)
     world.binding.document["id"] = "nb-stale"  # a binding that no longer matches the pane's notebook
     out = world.call("onenote_append", {"html": "<p>y</p>"})
-    assert out["error"]["category"] == "Conflict"
-    assert world.brain._q("select status from writes order by id desc limit 1")[0]["status"] == "failed"
+    assert out["error"]["category"] == "Conflict" and "so it sent nothing" in out["error"]["message"]
+    # W5: the page read carries the notebook identity too, so the mismatch stops the change before it is sent
+    assert world.pane.tools().count("append") == 1 and len(world.brain._q("select id from writes")) == 1
 
 
 # ---- decision page, deliverables, provenance ------------------------------------------------------
@@ -1339,33 +1340,44 @@ def test_a30_reading_another_page_is_not_a_check_of_this_one(world):
     assert world.pane.tools().count("append") == 1 and [r["reconciled"] for r in _rows(world)] == [None]
 
 
-@pytest.mark.parametrize("land", [True, False])
+@pytest.mark.parametrize("read_error,category", [("PaneBusy", "PaneBusy"), ("PaneReload", "NotFound")])
 @pytest.mark.parametrize("name,args,canonical", [w for w in A30_WRITES if w[2] != "create_page"])
-def test_a33_a_pageless_write_whose_get_context_failed_stays_held_and_is_never_resent(world, name, args, canonical,
-                                                                                      land):
-    """A32 P1, pinned as-is: when the preliminary get_context fails, the write is still sent with page_id=None, and
-    no later page read can settle that row (it matches no page). The safe outcome is an indefinitely held write: no
-    retry and no successful read of the page (landed or not) ever sends the identical change again."""
+def test_w5_a_write_whose_page_context_read_fails_is_refused_before_anything_is_sent(world, name, args, canonical,
+                                                                                     read_error, category):
+    """W5 (replaces the A33 pin of A32 P1): a change that names no page reads the open page first. When that read
+    failed, the change used to be sent with no page recorded, and a lost result then stayed held for good (no page read
+    matches a page-less row). Now nothing is sent and nothing is held, and once the page can be read the identical
+    call runs once, with its page recorded. Hermes never retries by itself; a dead pane's read is not an uncertain
+    change (nothing was sent), so it is not reported as PaneReload."""
     kick = world.note.by_title("Kickoff 2026-11-02")["id"]
     world.note.active = kick
-    lose = _lose_context_after(world, canonical, land=land)
-    lost = world.pane.handle
-    busy = {"ok": False, "error": {"category": "PaneBusy", "message": "no answer"}}
-    world.pane.handle = lambda t, a: busy if t == "get_context" else lost(t, a)
-    assert world.call(name, args)["error"]["category"] == "PaneReload"
-    assert world.pane.tools().count(canonical) == 1
-    assert world.brain._q("select page_id from writes")[0]["page_id"] is None
-    world.pane.handle = lose  # the user reloaded the tab; the pane answers again
-    for _ in range(6):
-        assert world.call(name, args)["error"]["category"] == "ExecutionUncertain"
-    for _ in range(3):  # a successful read of the page the change went to does not settle a page-less row
-        ok(world.call("onenote_get_page", {"pageId": kick}))
-        ok(world.call("onenote_get_page", {}))
-        ok(world.call("onenote_list_pages", {"all": True}))
+    real = world.pane.handle
+    failed = {"ok": False, "error": {"category": read_error, "message": "no answer"}}
+    world.pane.handle = lambda t, a: failed if t == "get_context" else real(t, a)
+    for _ in range(3):
         res = world.call(name, args)
-        assert res["ok"] is False and res["error"]["category"] == "ExecutionUncertain", res
+        assert res["ok"] is False and res["error"]["category"] == category, res
+        msg = res["error"]["message"]
+        assert "could not tell which OneNote page is open" in msg and "so it sent nothing" in msg, msg
+        assert "may or may not" not in json.dumps(res)
+    assert world.pane.tools().count(canonical) == 0
+    assert world.brain._q("select * from writes") == []
+    world.pane.handle = real  # the pane answers again
+    ok(world.call(name, args))
     assert world.pane.tools().count(canonical) == 1
-    assert [(r["status"], r["reconciled"]) for r in _rows(world)] == [("uncertain", None)]
+    assert [r["page_id"] for r in world.brain._q("select page_id from writes")] == [kick]
+
+
+@pytest.mark.parametrize("name,args,canonical", [w for w in A30_WRITES if w[2] != "create_page"])
+def test_w5_a_write_with_no_open_page_is_refused_before_anything_is_sent(world, name, args, canonical):
+    real = world.pane.handle
+    nopage = {"ok": True, "data": {"notebook": {"id": "nb-north", "name": "Northwind"}, "section": None, "page": None}}
+    world.pane.handle = lambda t, a: nopage if t == "get_context" else real(t, a)  # executor.js: page null, none open
+    res = world.call(name, args)
+    assert res["ok"] is False and res["error"]["category"] == "NotFound", res
+    assert "OneNote reports no open page" in res["error"]["message"] and "so it sent nothing" in res["error"]["message"]
+    assert world.pane.tools().count(canonical) == 0
+    assert world.brain._q("select * from writes") == []
 
 
 @pytest.mark.parametrize("name,args,canonical", A30_WRITES)
@@ -1798,24 +1810,21 @@ def test_f8_review_paragraph_fingerprint_covers_the_paragraphs_under_it(mods):
     assert fps["o"] == f(paras)
 
 
-def test_f8_d2_undo_of_a_pageless_uncertain_change_says_so_once_and_never_sends(world):
-    """A33: a change whose preliminary get_context failed has no page, so no read can settle it. Undo says exactly that
-    (not NothingToUndo), sends nothing, and the next undo moves on; the identical change stays held."""
-    kick = world.note.by_title("Kickoff 2026-11-02")["id"]
-    world.note.active = kick
-    real = _lose_context_after(world, "append")
-    lost = world.pane.handle
-    busy = {"ok": False, "error": {"category": "PaneBusy", "message": "no answer"}}
-    world.pane.handle = lambda t, a: busy if t == "get_context" else lost(t, a)
-    assert world.call("onenote_append", {"html": F8_BULLETS})["error"]["category"] == "PaneReload"
-    assert world.brain._q("select page_id from writes")[0]["page_id"] is None
-    world.pane.handle = real  # the user reloaded the tab
+def test_f8_d2_undo_of_a_pageless_uncertain_change_says_so_once_and_never_sends(world, mods):
+    """A33: a change held with no page cannot be settled by any read. W5 no longer sends one, but an earlier version
+    may have left such a row in the ledger (its get_context read had failed). Undo says exactly that (not
+    NothingToUndo), sends nothing, and the next undo moves on; the identical change stays held."""
+    _, brainmod = mods
+    args = {"html": F8_BULLETS}
+    world.brain.begin_write("nb-north", None, "op-pageless", "onenote_append", "append",
+                            brainmod.digest("onenote_append", "append", args), "added a block to a page", {"check": {}})
+    world.brain.finish_write("op-pageless", "uncertain")
     res = world.call("office_undo", {"app": "onenote"})
     assert res["ok"] is False and res["error"]["category"] == "ExecutionUncertain", res
     assert "without the page it went to" in res["error"]["message"] and "delete the block by hand" in res["error"]["message"]
     assert world.call("office_undo", {"app": "onenote"})["error"]["category"] == "NothingToUndo"
-    assert _writes_sent(world) == ["append"]
-    assert world.call("onenote_append", {"html": F8_BULLETS})["error"]["category"] == "ExecutionUncertain"
+    assert world.call("onenote_append", args)["error"]["category"] == "ExecutionUncertain"
+    assert _writes_sent(world) == []
 
 
 # ---- F8 round 2 (A42): undo adopts only a block the pane's journal names; an incomplete read never settles ---------

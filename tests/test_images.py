@@ -1010,7 +1010,8 @@ def test_a28_onenote_insert_lost_mid_write_is_uncertain_and_ledgered_uncertain(p
            "made: after the reload, read the page before trying again. Ask the user to reload the OneNote browser tab "
            "(or close and reopen the Workbench pane); the pane reconnects to this chat by itself. Then try again once.")
     lost = {"ok": False, "error": {"category": "PaneReload", "code": "OfficeContextLost", "message": msg}}
-    ctx, pane = tool("onenote", {"insert_image": lost})
+    # the open page is read first (W5: with no page known nothing would be sent)
+    ctx, pane = tool("onenote", {"insert_image": lost, "get_context": {"ok": True, "data": {"page": {"id": "pg-1"}}}})
     ctx._test_brain = brainmod.Brain(lambda: sqlite3.connect(str(tmp_path / "brain.db"), check_same_thread=False))
     out = _call(ctx, {"app": "onenote", "path": _gen(home), "alt": "Whiteboard photo"})
     assert out["ok"] is False and out["data"]["status"] == "uncertain", out
@@ -1052,6 +1053,24 @@ class _ImagePage:
                                                             "text": "Meeting notes", "truncated": False}}
                 if self.read_ok else {"ok": False, "error": {"category": "PaneBusy", "message": "no answer"}},
                 "image_status": lambda a: {"ok": True, "data": {"exists": True, "images": 1}}}
+
+
+def test_w5_image_whose_page_context_read_fails_is_never_sent(plugin, tool, home, tmp_path):
+    """W5: a OneNote picture that names no page reads the open page first. When that read fails (here OneNote stopped
+    answering), nothing is sent and nothing is held: it used to be inserted with no page recorded, and a lost result
+    then stayed held for good. A refused insert is 'failed' (nothing changed), never 'uncertain'."""
+    import sqlite3
+    brainmod = sys.modules["hermes_office_desktop.brain"]
+    page = _ImagePage(land=True)
+    read_lost = {"ok": False, "error": {"category": "PaneReload", "code": "OfficeContextLost",
+                                        "message": "OneNote stopped answering this add-in. Nothing was changed."}}
+    ctx, pane = tool("onenote", {**page.answers(), "get_context": read_lost})
+    ctx._test_brain = brainmod.Brain(lambda: sqlite3.connect(str(tmp_path / "brain.db"), check_same_thread=False))
+    out = _call(ctx, {"app": "onenote", "path": _gen(home), "alt": "Whiteboard photo"})
+    assert out["ok"] is False and out["error"]["category"] == "NotFound", out
+    assert "so it sent nothing" in out["error"]["message"]
+    assert out["data"]["status"] == "failed" and "Nothing was changed in OneNote" in out["data"]["next"], out
+    assert _inserts(pane) == 0 and ctx._test_brain._q("select * from writes") == []
 
 
 def _a30_image(tool, tmp_path, land):

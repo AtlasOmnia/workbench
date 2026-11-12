@@ -209,9 +209,10 @@ Hermes Desktop
   A page read follows nested paragraphs (list items) up to 64 levels deep; one that could not read everything (deeper
   nesting, or paragraphs under a table cell's text) says `truncated` and `incomplete`. Such a read never shows a change
   as not landed, and nothing on that block is adopted, fingerprinted or deleted (undo answers Conflict; delete by hand).
-  A change that names no page records the open page first (one `get_context` read); if that read fails, the change
-  is sent with no page recorded and no later read can release it: it stays held, the identical change is not re-sent,
-  and the user reloads the OneNote tab and checks the page themselves. A OneNote read the pane cannot finish within Hermes' wait is `PaneBusy` (nothing changed), and
+  A change that names no page records the open page first (one `get_context` read); if that read fails or shows no
+  open page, the change is refused before it is sent (the read's error, or `NotFound`): nothing changed and nothing
+  is held, and asked again once the page can be read (after the user reloads the OneNote tab if OneNote stopped
+  answering), it runs once. A OneNote read the pane cannot finish within Hermes' wait is `PaneBusy` (nothing changed), and
   `onenote_list_pages` stops after 20 s with `complete: false` and `stoppedEarly`. `brain_make_deliverables` takes an optional
   `outlook` host: a reply draft to the source email summarising the decisions and actions (status `applied`:
   the draft is a separate form the pane cannot read back; it carries `replyText` for the click-Reply-then-insert path).

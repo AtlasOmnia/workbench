@@ -316,6 +316,11 @@ HELD_READ = ("An identical earlier write may or may not have applied and Hermes 
 HELD_LIST = ("An identical earlier page creation may or may not have applied and Hermes has not seen the notebook's pages "
              "since. List them (onenote_list_pages with all: true) first: that successful, complete listing is the "
              "check. If the page is not there, call again and it runs once; if it is, it is not run again.")
+# W5: a change that names no page is sent only once the open page is known: without it a lost result could never be
+# settled (no page read matches a page-less ledger row), so the change would stay held for good.
+NO_PAGE = ("Hermes could not tell which OneNote page is open ({why}), so it sent nothing: this change was not made and "
+           "is not held back. Once the page it is for is open in OneNote (onenote_open_page) and the pane answers, "
+           "call this once more.")
 RECONCILING_READS = ("get_page", "list_pages")
 TEXT_EVIDENCE_MIN = 3  # shorter written lines are too common to say anything about the page
 
@@ -491,10 +496,15 @@ def mutate(env: Env, tool: str, canonical: str, args: dict, kind: str, page_id: 
             raise BridgeError("ExecutionUncertain", held)
     if page_id is None and kind in ("append", "table", "image"):
         # A30: the open page is the one the write lands on; record it so a read of that page can settle it later.
+        # W5: no page, nothing sent (never retried). A read the dead pane failed (PaneReload) is not an uncertain
+        # change, since nothing was sent: it is reported as NotFound, the executor's category for no open page.
         try:
             page_id = ((env.need("get_context") or {}).get("page") or {}).get("id")
-        except BridgeError:
-            page_id = None
+        except BridgeError as exc:
+            raise BridgeError("NotFound" if write_uncertain(exc.category) else exc.category,
+                              NO_PAGE.format(why=f"the page read failed: {exc}"))
+        if not page_id:
+            raise BridgeError("NotFound", NO_PAGE.format(why="OneNote reports no open page"))
     op_id = "op-" + uuid.uuid4().hex
     env.brain.begin_write(nb, page_id, op_id, tool, kind, dig, summary,
                           {**(extra or {}), "check": _evidence_material(env, nb, canonical, args, kind)})

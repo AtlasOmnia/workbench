@@ -91,13 +91,12 @@ undo after a lost delete reads the page first and sends nothing if Hermes' block
 names no page now starts with one `get_context` read. This path is covered by tests; no `PaneReload`,
 `ExecutionUncertain` or `AlreadyApplied` came up in the F7 runs.
 
-Limit (A32, pinned by a test in A33): if that preliminary `get_context` read itself fails, the change is still sent
-but with no page recorded, and no later read can settle it, because the ledger row names no page to match. If the
-change's result is then lost, it stays held indefinitely: every identical call is refused (`ExecutionUncertain`) and
-the identical change is not re-sent, even after the user reloads the tab and Hermes reads the page successfully. What
-the user sees is that the change stays held; they reload the OneNote tab and check the page themselves (and add the
-content by hand, or ask for a differently worded change, if it is missing). The outcome is a held write, never a
-duplicate.
+Fixed since (unit tests only, not live-tested): if that preliminary `get_context` read itself fails, or shows no open
+page, the change is refused before anything is sent: nothing changed and nothing is held, and the identical call runs
+once when the page can be read. Before, such a change was still sent with no page recorded (A32, pinned by a test in
+A33), and if its result was then lost it stayed held indefinitely, because no later read can settle a ledger row that
+names no page. A row an earlier version left that way still stays held: the identical change is not re-sent, undo says
+so once and passes over it, and the user reloads the OneNote tab and checks the page themselves. Never a duplicate.
 
 ## `ff9771e` (A35): rerun after the skill change, incomplete
 

@@ -43,7 +43,7 @@ Hermes to pane and back (model and approval time excluded):
 | Outlook (mail), F5 | 1/1 | 102.5 ms | 188 ms |
 | Outlook calendar, F5 | 1/1 | 172 ms | 212 ms |
 
-An uncertain OneNote change needs a successful page read before retry (present: refused; absent: once). Open page unknown: stays held, not re-sent; reload the tab, check the page. In the real Hermes Desktop
+An uncertain OneNote change needs a successful page read before retry (present: refused; absent: once). Open page unknown: nothing sent or held; retry once the page can be read. In the real Hermes Desktop
 app the bare story passed 5/5 in one chat (warm; [live-evidence.md](docs/live-evidence.md#real-hermes-desktop-session-studio-f7)). Known limits (a new calendar event is requested, not opened in the pane; the model sometimes needs a second
 ask) are in [live-evidence.md](docs/live-evidence.md#current-f8-402f00e-a45a46).
 

@@ -114,18 +114,19 @@ def test_f8_is_the_current_evidence_and_older_commits_are_cited_only_labelled():
         assert old in readme
 
 
-def test_a_pageless_change_whose_get_context_failed_is_documented_as_held_not_settled():
-    """A32 P1 / A33: when the preliminary get_context fails, no later read can settle the change; the docs say it stays
-    held (not re-sent) and the user checks the page, instead of implying a read always settles it."""
+def test_a_change_whose_page_read_failed_is_documented_as_refused_before_sending():
+    """W5 (was A32 P1 / A33): when the preliminary get_context fails or shows no open page, the change is refused before
+    it is sent; the docs say so, and keep the held-row story only for rows an earlier version left."""
     ev = " ".join(_read("docs/live-evidence.md").split())
-    assert "if that preliminary `get_context` read itself fails" in ev
-    assert "it stays held indefinitely" in ev and "the identical change is not re-sent" in ev
-    assert "reload the OneNote tab and check the page themselves" in ev and "never a duplicate" in ev
+    assert ("if that preliminary `get_context` read itself fails, or shows no open page, the change is refused before "
+            "anything is sent: nothing changed and nothing is held") in ev
+    assert "A row an earlier version left that way still stays held" in ev and "Never a duplicate." in ev
     ref = " ".join(_read("docs/reference.md").split())
-    assert "if that read fails, the change is sent with no page recorded and no later read can release it" in ref
-    assert "the identical change is not re-sent" in ref
+    assert "if that read fails or shows no open page, the change is refused before it is sent" in ref
+    assert "is sent with no page recorded" not in ref
     readme = " ".join(_read("README.md").split())
-    assert "Open page unknown: stays held, not re-sent; reload the tab, check the page." in readme
+    assert "Open page unknown: nothing sent or held; retry once the page can be read." in readme
+    assert "Open page unknown: stays held" not in readme
 
 
 def test_real_desktop_session_findings_reach_the_user_guidance():
