@@ -167,8 +167,9 @@ Hermes Desktop
 * **New session id, new code.** Pairing is bound to the chat's session id. Hermes assigns a new
   one when it auto-compresses a long chat or when `/rewind` forks it, so after either the pane
   answers `NotPaired`: call `office_connect` again and type the fresh code into the same pane.
-* Mutations request Hermes approval through `pre_tool_call` (one `rule_key`, so "always
-  for this session" works). **Unattended runs** are blocked outright, for reads too, even
+* Mutations request Hermes approval through `pre_tool_call` (ordinary edits share one `rule_key`, so "always
+  for this session" works; `excel_delete_sheet`, `excel_clear_range`, `powerpoint_delete_slide` and
+  `onenote_create_page` share a separate one, so that "always" never pre-approves them). **Unattended runs** are blocked outright, for reads too, even
   when an operator configured `approvals.cron_mode`/`unattended_mode` to approve. A run is
   unattended when `ctx.current_cron_execution()` reports a cron fire (including a job hosted
   inside the gateway), when the `HERMES_CRON_SESSION` marker is set, or when the session

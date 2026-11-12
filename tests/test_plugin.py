@@ -101,7 +101,21 @@ def test_approval_requested_for_mutations_only(plugin):
         assert gate(tool_name=ro, args={}) is None
     for mut in ("excel_write_range", "excel_run_calculation", "word_insert_text", "powerpoint_delete_slide", "office_undo"):
         d = gate(tool_name=mut, args={})
-        assert d["action"] == "approve" and d["rule_key"] == plugin.APPROVAL_RULE_KEY, mut
+        assert d["action"] == "approve" and d["rule_key"] == plugin.rule_key(mut), mut
+
+
+def test_destructive_tools_have_their_own_approval_rule(plugin):
+    """Review: one rule_key per risk class, so "always for this session" on a formatting edit never pre-approves a
+    delete. The live-test approver still matches both (they carry the plugin id)."""
+    gate = fresh(plugin, 19765).hooks["pre_tool_call"]
+    destructive = {"excel_delete_sheet", "excel_clear_range", "powerpoint_delete_slide", "onenote_create_page"}
+    assert plugin.DESTRUCTIVE_TOOLS == destructive and plugin.DESTRUCTIVE_RULE_KEY != plugin.APPROVAL_RULE_KEY
+    for name in sorted(destructive) + ["excel_write_range", "excel_format_range", "powerpoint_format_text",
+                                       "word_insert_text", "onenote_append", "office_undo"]:
+        d = gate(tool_name=name, args={})
+        want = plugin.DESTRUCTIVE_RULE_KEY if name in destructive else plugin.APPROVAL_RULE_KEY
+        assert d["action"] == "approve" and d["rule_key"] == want, name
+        assert "hermes-office-desktop" in d["rule_key"]
     assert gate(tool_name="terminal", args={}) is None  # never touches other tools
     assert gate(tool_name="excel_execute_plan", args={}) is None  # not ours
 
@@ -414,7 +428,7 @@ def test_every_approval_prompt_still_matches_the_live_test_approver(plugin):
                                                                 "brain_make_deliverables", "brain_links"]
     for name in names:
         d = gate(tool_name=name, args={})
-        assert d and d["rule_key"] == plugin.APPROVAL_RULE_KEY, name
+        assert d and d["rule_key"] == plugin.rule_key(name) and "hermes-office-desktop" in d["rule_key"], name
         assert any(h in d["message"] for h in hints), (name, d["message"])
 
 

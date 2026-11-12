@@ -141,7 +141,7 @@ def test_approval_rules(world, plugin):
                       ("brain_decision_page", {}), ("brain_make_deliverables", {}), ("brain_sync", {"crawl": True}),
                       ("office_undo", {"app": "onenote"})):
         d = gate(tool_name=mut, args=args)
-        assert d and d["action"] == "approve" and d["rule_key"] == plugin.APPROVAL_RULE_KEY, mut
+        assert d and d["action"] == "approve" and d["rule_key"] == plugin.rule_key(mut), mut
 
 
 def test_unattended_refuses_pane_tools_but_allows_index_reads(world, monkeypatch):

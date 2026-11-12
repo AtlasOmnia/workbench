@@ -94,8 +94,9 @@ If `desktop_preview` `read` reports `surface: 'iframe'`, the user is in a browse
    file opens; tell the user to wait and click again. Outlook on the web shows no pin for this pane: leave out
    any "pin the pane" line.
 6. Confirm with `office_status`, then start with the overview tool for that app.
-7. Edits ask for Hermes approval. Choosing "always" for the session covers all document
-   edits from this plugin (one approval rule).
+7. Edits ask for Hermes approval. Choosing "always" for the session covers ordinary document
+   edits from this plugin. Deleting a sheet or slide, clearing a range and creating a OneNote page
+   have their own approval rule, so they still ask.
 
 ## Tabs, codes and restarts (seen in a real Desktop session)
 - One app per preview tab. You cannot bring a tab to the front, and `drive_preview` acts only on the ACTIVE tab.

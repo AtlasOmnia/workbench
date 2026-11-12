@@ -59,6 +59,15 @@ READ_ONLY = frozenset({
     "office_connect", "office_status", "office_disconnect",
 })
 APPROVAL_RULE_KEY = "hermes-office-desktop:document-mutation"
+# One approval rule per risk class: deletes and changes Office.js cannot take back share their own rule_key, so
+# "always for this session" on an ordinary edit never pre-approves them (and the other way round).
+DESTRUCTIVE_RULE_KEY = "hermes-office-desktop:destructive-edit"
+DESTRUCTIVE_TOOLS = frozenset({"excel_delete_sheet", "excel_clear_range", "powerpoint_delete_slide",
+                               "onenote_create_page"})
+
+
+def rule_key(tool_name: str) -> str:
+    return DESTRUCTIVE_RULE_KEY if tool_name in DESTRUCTIVE_TOOLS else APPROVAL_RULE_KEY
 
 # Next step for the agent, per error category (kept short; surfaced as error.hint).
 HINTS = {
@@ -1196,8 +1205,8 @@ WHAT_OF = {"excel": "tracker", "word": "brief", "powerpoint": "deck", "outlook":
 def approval_message(tool_name: str, args, session_id=None) -> str:
     """'<App> · <document title, when the paired pane reported one> · <operation target> (<undo note>) · product'.
 
-    Wording only: the rule_key stays one constant, so "always for this session" and the live-test approver
-    (which keys on the rule and the product name) behave exactly as before."""
+    Wording only: the rule_key comes from rule_key() (ordinary edits, or the destructive class); the live-test
+    approver keys on the plugin id inside either rule and on the product name."""
     a = args if isinstance(args, dict) else {}
     try:
         app, op = _operation(tool_name, a, session_id)
@@ -1212,7 +1221,8 @@ def approval_gate(tool_name="", args=None, session_id=None, **_):
     """Request (never grant) human approval for document mutations via pre_tool_call.
 
     Hermes owns the prompt, session grants and unattended refusal (cron/gateway deny).
-    One rule_key lets the user choose "always" once per session instead of per edit.
+    Ordinary edits share one rule_key, so the user can choose "always" once per session instead of per edit;
+    DESTRUCTIVE_TOOLS share a separate one, so that "always" never pre-approves a delete (and vice versa).
     In an unattended run the call is blocked outright, whatever the approval policy says.
     """
     if tool_name in _ol.TOOLS or tool_name == "brain_from_email":
@@ -1223,7 +1233,7 @@ def approval_gate(tool_name="", args=None, session_id=None, **_):
         if not _ol.needs_approval(tool_name, args):
             return None
         return {"action": "approve", "message": approval_message(tool_name, args, session_id),
-                "rule_key": APPROVAL_RULE_KEY}
+                "rule_key": rule_key(tool_name)}
     pane_tool = tool_name in _on.ONENOTE_TOOLS or tool_name in _on.BRAIN_PANE_TOOLS
     if tool_name not in DOCUMENT_TOOLS and not pane_tool \
             and tool_name not in ("office_undo", "office_connect", "office_insert_image"):
@@ -1236,14 +1246,14 @@ def approval_gate(tool_name="", args=None, session_id=None, **_):
         if not _on.needs_approval(tool_name, args):
             return None
         return {"action": "approve", "message": approval_message(tool_name, args, session_id),
-                "rule_key": APPROVAL_RULE_KEY}
+                "rule_key": rule_key(tool_name)}
     if tool_name in READ_ONLY:
         return None
     if tool_name == "office_insert_image" and isinstance(args, dict) and "html" in args \
             and args.get("app") in RASTER_HOSTS:
         return None  # answered with NeedsRaster; nothing is changed
     return {"action": "approve", "message": approval_message(tool_name, args, session_id),
-            "rule_key": APPROVAL_RULE_KEY}
+            "rule_key": rule_key(tool_name)}
 
 
 def register(ctx):
