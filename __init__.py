@@ -506,8 +506,8 @@ def _upload_step(ctx, app: str, path, where) -> str:
 OUTLOOK_SETUP = [
     f"If the preview pane does not already show your mailbox, open {WEB_URLS['outlook']} there and sign in.",
     None,  # the upload step: _upload_step(ctx, "outlook", ...)
-    "Open a message (or a draft), choose More apps (Apps in a draft) > Workbench, and type the pairing code. Pin the "
-    "pane to keep it open as you move between messages.",
+    "Open a message (or a draft), choose More apps (Apps in a draft) > Workbench, and type the pairing code. There is "
+    "no pin: the pane stays on that message. For another message or a reply, open it first, then open Workbench there.",
     "Calendar: the same add-in. Open an event (or its edit form) in Outlook's calendar, choose Apps (or ...) > Omnia "
     "Works, and type the pairing code there.",
 ]

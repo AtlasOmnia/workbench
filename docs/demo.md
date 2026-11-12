@@ -60,8 +60,8 @@ last OneNote change is a created page, which Hermes cannot undo.
 
 ## Demo idea: email to decision page to deliverables to reply draft (Outlook on the web)
 
-Not part of the timed loop above. With Outlook on the web (Workbench pane pinned) and OneNote paired to the
-same chat:
+Not part of the timed loop above. With Outlook on the web (Workbench open on the email; there is no pin, so the
+pane stays on that email) and OneNote paired to the same chat:
 
 1. Open the meeting-notes email. "Turn this email into a decision page." (`brain_from_email` with the email's
    decisions and actions, quotes copied from the email: the OneNote decision page opens, linked to "Email: ...").

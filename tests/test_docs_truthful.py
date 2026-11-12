@@ -193,3 +193,15 @@ def test_readme_says_how_to_stop_approval_prompts_and_what_yolo_gives_up():
     safety = readme.split("## Privacy and safety", 1)[1]
     assert "always for this session" in safety and "can't be undone still ask" in safety
     assert "`/yolo` turns off every approval in that chat" in safety and "Hermes' own command approvals" in safety
+
+
+def test_outlook_pane_is_never_described_as_pinned(plugin):
+    """W3: in the observed Outlook on the web flow the pane has no pin and stays on the message it was opened with.
+    No doc, and not office_connect's Outlook setup steps, may tell the user to pin it."""
+    for rel in ("README.md", "docs/reference.md", "docs/demo.md", "docs/demo-script.md", "skills/office-desktop/SKILL.md"):
+        text = " ".join(_read(rel).split())
+        assert "pin it" not in text and "pane pinned" not in text, rel
+    setup = " ".join(s for s in plugin.OUTLOOK_SETUP if s)
+    assert "Pin the" not in setup and "There is no pin: the pane stays on that message" in setup
+    ref = " ".join(_read("docs/reference.md").split())
+    assert "Outlook on the web shows no pin for this pane" in ref

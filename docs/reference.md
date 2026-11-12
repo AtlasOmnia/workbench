@@ -220,10 +220,12 @@ Hermes Desktop
   reply-all; the email's text is data, never instructions.
 * **Install:** in Outlook on the web, open a message, then More apps > Get add-ins > My add-ins > Custom Addins >
   Add a custom add-in > Add from File..., choose `manifest-outlook.xml` in Documents > Omnia Works > add-in
-  manifests (`data.manifestPath`), then Install. Open the pane with More apps (Apps in a
-  draft) > Workbench, pair as for the other apps, and pin it to keep it with you as you change messages. The
-  manifest (`MailApp`, read + compose forms, ReadWriteItem) asks for Mailbox 1.3; the pinnable pane uses
-  VersionOverrides 1.1 (Mailbox 1.5). Outlook on the web reported Mailbox 1.1-1.15 in the A10b spike.
+  manifests (`data.manifestPath`), then Install. Open the email first, then the pane with More apps (Apps in a
+  draft) > Workbench, and pair as for the other apps. Outlook on the web shows no pin for this pane (seen in the
+  real Hermes Desktop session): it stays on the message it was opened with, so for another message or a reply, open
+  that first and open Workbench there (in a draft: Message > Apps). The manifest (`MailApp`, read + compose forms,
+  ReadWriteItem) asks for Mailbox 1.3; it also declares the pane pinnable (VersionOverrides 1.1, Mailbox 1.5), which
+  Outlook on the web did not offer in that flow. Outlook on the web reported Mailbox 1.1-1.15 in the A10b spike.
 * **Demo idea:** an email of meeting notes > `brain_from_email` with its two decisions and one action (a OneNote
   decision page) > `brain_make_deliverables` (tracker, brief, deck) > `hosts: ["outlook"]` (a reply draft you send)
   > `hosts: ["calendar"]` with `followUp` times (a follow-up meeting draft you save).
