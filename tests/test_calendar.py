@@ -187,6 +187,30 @@ def test_draft_new_requests_a_form_with_no_attendees_and_never_claims_it_opened_
     assert len(cal.forms) == 1
 
 
+def test_w6_a_blocked_popout_event_form_says_so_and_gives_the_route_that_works(world):
+    """W6: the new event form is a popout the Desktop pane blocks (pop-ups stay blocked). The receipt says it could
+    not open in the pane and gives the steps that work: New event, then Apps > Workbench in it, then
+    calendar_update_draft with the same values. Nothing is saved or sent; the follow-up deliverable says the same."""
+    cal = FakeCalendar("mail")
+    world.pair("outlook", cal)
+    args = {"subject": "Follow-up: beta", "start": "2026-11-12T10:00:00-05:00", "end": "2026-11-12T10:30:00-05:00",
+            "location": "Studio", "text": "Agenda"}
+    d = ok(world.call("calendar_draft_new", args))
+    nxt = d["next"]
+    assert d["status"] == "requested" and d["saved"] is False and d["sent"] is False and "opened" not in d
+    assert "could not open in the pane" in nxt and "popout" in nxt and "nothing was sent or saved" in nxt, nxt
+    assert "1. In Outlook's calendar, click New event." in nxt and "open Apps > Workbench" in nxt, nxt
+    assert "calendar_update_draft with the same subject, start, end, location and text" in nxt, nxt
+    assert "office_connect with app 'outlook'" in nxt and "may open it" not in nxt
+    dp = _decisions(world)
+    follow = {"start": "2026-11-12T10:00:00-05:00", "end": "2026-11-12T10:30:00-05:00"}
+    r = ok(world.call("brain_make_deliverables", {"decisionPageId": dp["pageId"], "hosts": ["calendar"],
+                                                  "followUp": follow}))["results"][0]
+    assert "could not open in the pane" in r["next"] and "open Apps > Workbench" in r["next"], r["next"]
+    assert "calendar_update_draft with followUp and agendaText" in r["next"] and "may open it" not in r["next"]
+    assert len(cal.forms) == 2 and r["saved"] is False and r["sent"] is False
+
+
 def test_brain_from_email_indexes_the_open_event_and_a_sweep_keeps_it(world):
     cal = FakeCalendar("compose")
     world.pair("outlook", cal)

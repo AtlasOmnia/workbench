@@ -1704,10 +1704,14 @@ def brain_make_deliverables(env: Env, args: dict) -> dict:
                                  "provenance": "brain_why answers 'why is this here?' for these artifacts"}}
 
 
-OUTLOOK_REPLY_NEXT = ("Outlook was asked to open a reply draft to the source email (never sent; Outlook's own reply to the "
-                      "sender). Outlook on the web opens it as a popout window, which the Hermes Desktop preview pane blocks, "
-                      "so it may not appear: then ask the user to click Reply on that email and call outlook_insert with "
-                      "replyText. Hermes cannot read a separate draft back; the user reviews, then sends or discards it.")
+OUTLOOK_REPLY_NEXT = ("Outlook was asked for a reply draft to the source email (never sent; Outlook's own reply to the "
+                      "sender), but it could not open in the pane: Outlook on the web opens it as a popout window, which "
+                      "the Hermes Desktop pane blocks. Tell the user that, then give these steps (if it did appear "
+                      "anyway, start at step 2): 1. Open the source email and click Reply. 2. In the reply, open the "
+                      "Message tab > Apps > Workbench (not Home > More apps); if the pane asks for a pairing code, call "
+                      "office_connect with app 'outlook' and let the user type it. 3. Ask again: Hermes calls "
+                      "outlook_insert with replyText. Hermes cannot read a separate draft back; the user reviews, then "
+                      "sends or discards it.")
 HOST_NEXT["outlook"] = OUTLOOK_REPLY_NEXT
 STATUS_MEANING = ("verified = written and read back as expected; applied = written, not read back; partial = some steps "
                   "written, then one failed; uncertain = a step may not have landed or the readback disagrees; failed / "

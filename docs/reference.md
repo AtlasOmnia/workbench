@@ -186,8 +186,9 @@ Hermes Desktop
   opens a pre-filled reply to the sender, or a new message with a subject and body and no recipients, through
   `displayReplyForm` / `displayNewMessageForm`; **limitation, seen live in A10b:** Outlook on the web opens these forms
   as a popout window, and the Hermes Desktop preview pane, a `<webview>` without `allowpopups`, blocks popouts, so the
-  request succeeds but no draft appears there; the receipt says `requested`, never `opened`, and its next step is to
-  click Reply yourself and let Hermes `outlook_insert` the text into that draft), and `brain_from_email` (indexes the open email into this
+  request succeeds but no draft appears there; the receipt says `requested`, never `opened`, says the draft could not
+  open in the pane, and gives the steps: click Reply (or New mail) yourself, open Workbench in that draft from its
+  Message tab > Apps, and let Hermes `outlook_insert` the text into it), and `brain_from_email` (indexes the open email into this
   profile's local brain index as `email:<key>`; with decisions it also creates a OneNote decision page from it
   through `brain_decision_page`, quotes checked against the email; when that section already has a page with the same
   title, from an earlier run, the new page gets the next free title, `<title> (2)` up to `(20)`, the old page is never
@@ -243,7 +244,9 @@ Hermes Desktop
   approval; read back by Office.js; one `office_undo {"app": "outlook"}` restores every prior value; the event is not
   saved and no update is sent: you save it), `calendar_draft_new` (approval: Outlook opens a new event form with
   subject, start, end, location and body, no attendees, through `displayNewAppointmentForm`; the receipt says
-  `requested`, never `opened` or `saved`). Times are instants with an offset (`2026-11-12T10:00:00-05:00`); a bare
+  `requested`, never `opened` or `saved`; it is a popout the pane blocks, so the receipt says it could not open in the
+  pane and gives the steps: click New event yourself, open Apps > Workbench in it, and let Hermes fill it with
+  `calendar_update_draft`). Times are instants with an offset (`2026-11-12T10:00:00-05:00`); a bare
   local time is refused. `brain_from_email` also indexes the open event (`event:<key>`, kept by notebook sweeps), and
   `brain_make_deliverables` takes an optional `calendar` host plus `followUp` `{start, end, subject?, location?}`: a
   follow-up meeting draft listing the decisions and actions (status `applied`: a separate form Hermes cannot read back).

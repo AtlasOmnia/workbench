@@ -138,6 +138,24 @@ def test_draft_reply_and_new_open_drafts_with_no_recipients(world):
     assert len(ol.forms) == 2
 
 
+def test_w6_a_blocked_popout_draft_says_so_and_gives_the_route_that_works(world):
+    """W6: Outlook on the web opens reply / new-message forms as a popout, which the Desktop pane blocks (pop-ups stay
+    blocked). The receipt says the draft could not open in the pane and gives the exact steps that work: the user opens
+    the draft, then Workbench in it from the Message tab > Apps, then Hermes fills it. Nothing is sent or saved."""
+    ol = FakeOutlook()
+    world.pair("outlook", ol)
+    for name, args, first in (("outlook_draft_reply", {"text": "Thanks, agreed."}, "1. Click Reply on the email."),
+                              ("outlook_draft_new", {"subject": "Follow-up", "text": "Hello"}, "1. Click New mail.")):
+        d = ok(world.call(name, args))
+        nxt = d["next"]
+        assert d["status"] == "requested" and d["sent"] is False and "opened" not in d
+        assert "could not open in the pane" in nxt and "popout" in nxt and "nothing was sent or saved" in nxt, nxt
+        assert first in nxt and "open the Message tab > Apps > Workbench (not Home > More apps)" in nxt, nxt
+        assert "office_connect with app 'outlook'" in nxt and "Hermes calls outlook_insert" in nxt, nxt
+        assert "may not appear" not in nxt
+    assert [t for t, _ in ol.calls] == ["draft_reply", "draft_new"]  # nothing else reached Outlook
+
+
 def test_brain_from_email_indexes_the_email_and_a_sweep_keeps_it(world):
     ol = FakeOutlook()
     world.pair("outlook", ol)
@@ -174,6 +192,9 @@ def test_email_to_decision_page_to_reply_draft(world):
     r = out["results"][0]
     assert r["host"] == "outlook" and r["status"] == "applied" and r["sent"] is False and "never sent" in r["next"]
     assert "popout" in r["next"] and "outlook_insert" in r["next"]
+    # W6: it says the draft could not open in the pane and gives the route that works
+    assert "could not open in the pane" in r["next"] and "1. Open the source email and click Reply." in r["next"]
+    assert "Message tab > Apps > Workbench" in r["next"] and "Hermes calls outlook_insert with replyText" in r["next"]
     assert out["status"] == "applied"
     (tool, args), = ol.forms
     assert tool == "draft_reply" and set(args) == {"text"}

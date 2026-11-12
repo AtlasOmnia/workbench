@@ -311,8 +311,8 @@ from what the user asked for:
   `data.status` (`verified` / `applied` / `uncertain`); undo with `office_undo {"app": "outlook"}`.
 - `outlook_draft_reply` replies to the sender only (never reply-all); `outlook_draft_new` has a subject and body,
   no recipients. Both only REQUEST a draft (`status: requested`): Outlook on the web opens it as a popout, which the
-  Desktop pane blocks. Say it may not appear; if it does not, ask the user to click Reply (or New mail) and open
-  Workbench in that draft (Message > Apps), then `outlook_insert` the same text into it.
+  Desktop pane blocks, so it could not open in the pane. Say so plainly and give the result's steps: the user clicks
+  Reply (or New mail) and opens Workbench in that draft (Message > Apps), then you `outlook_insert` the same text.
 - Email to decisions: `brain_from_email` indexes the open email; with `decisions` (and `actions`, exact `quote`s
   from the email) it also creates the OneNote decision page (OneNote must be paired). Then
   `brain_make_deliverables` as usual; add `"outlook"` to `hosts` (with that email open) for a reply draft that
@@ -330,8 +330,9 @@ from what the user asked for:
   (inserted at the body's cursor), in one call. Times need an offset, e.g. `2026-11-12T10:00:00-05:00`: take it
   from `calendar_get_event` (`start.local`). Read `data.status`; one `office_undo` restores everything.
 - `calendar_draft_new` REQUESTS a new event form (`status: requested`) with subject, start, end, location and text,
-  from a message or event being read. If no form appears (a blocked popout), ask the user to click New event and use
-  `calendar_update_draft` with the same values.
+  from a message or event being read. It could not open in the pane (a blocked popout): say so and give the result's
+  steps: the user clicks New event and opens Apps > Workbench in it, then you call `calendar_update_draft` with the
+  same values.
 - Decision to follow-up meeting: `brain_make_deliverables` with `hosts: ["calendar"]` and `followUp`
   `{start, end, subject?, location?}` (ask the user when). `brain_from_email` also indexes an open event.
 
