@@ -17,7 +17,7 @@ def test_catalog_and_manifest_keep_identity_and_enable_both_platforms():
     assert "filled by the publish runbook" in (ROOT / "catalog/hermes-office-desktop.yaml").read_text()
     assert len(catalog["description"]) < 2500
     assert "real Hermes Desktop sessions" in catalog["description"]
-    assert any("two profiles can both bind port 47615" in x for x in catalog["known_issues"])
+    assert any("two Hermes profiles at once are not live-tested" in x for x in catalog["known_issues"])
 
 
 def test_public_origin_smoke_is_explicitly_pending_and_complete():

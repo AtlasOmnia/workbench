@@ -207,7 +207,7 @@ def connect(profile, app="excel", session="chat-1"):
 
 def port_is_free(port):
     with socket.socket() as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # as the bridge itself binds
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # as the bridge binds off Windows
         try:
             s.bind(("127.0.0.1", port))
             return True
@@ -404,6 +404,28 @@ def test_reaper_thread_releases_an_idle_bridge_and_it_starts_again(bridge_mod):
         assert s.ensure_started() == port
     finally:
         s.stop()
+
+
+def test_a_port_another_bridge_listens_on_is_never_bound_a_second_time(bridge_mod):
+    """W1: on Windows, SO_REUSEADDR let a second bridge bind a port another bridge was already listening on (both binds
+    succeeded, and either could answer the pane). A taken port must fail the bind: the next bridge takes the next port,
+    and once every port is taken it says PortsBusy."""
+    ports = (19963, 19964)
+    a, b, c = (bridge_mod.BridgeServer(allowed_origin=ORIGIN, ports=ports, reap_interval=0) for _ in range(3))
+    try:
+        assert a.ensure_started() == 19963
+        assert b.ensure_started() == 19964
+        with pytest.raises(bridge_mod.BridgeError) as busy:
+            c.ensure_started()
+        assert busy.value.category == bridge_mod.PORTS_BUSY and c.port is None
+        assert hello(19963) == a.instance and hello(19964) == b.instance
+        with socket.socket() as s:  # nor can any other socket that asks for address reuse
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            with pytest.raises(OSError):
+                s.bind(("127.0.0.1", 19963))
+    finally:
+        for s in (a, b, c):
+            s.stop()
 
 
 def test_busy_message_names_the_ports_and_the_wait(bridge_mod):

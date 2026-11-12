@@ -751,6 +751,15 @@ class _Handler(BaseHTTPRequestHandler):
 
 class _QuietServer(ThreadingHTTPServer):
     daemon_threads = True
+    # W1: on Windows, SO_REUSEADDR (http.server's default) lets a second socket bind a port that another bridge is
+    # already listening on: both binds succeed and either can answer the pane. Bind exclusively there, so a taken port
+    # fails and ensure_started moves on to the next one. On macOS/Linux SO_REUSEADDR never shares a listening port.
+    allow_reuse_address = not hasattr(socket, "SO_EXCLUSIVEADDRUSE")
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
     def handle_error(self, request, client_address):  # peer resets are normal; never log request data
         return

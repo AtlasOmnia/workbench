@@ -526,8 +526,8 @@ that followed is recorded in the next section.
   * 2 (`tests/test_port_release.py`) show a **real Windows defect**, confirmed directly: two bridges in one process both
     bound `127.0.0.1:47615`. Python's `http.server` sets `SO_REUSEADDR`, and on Windows that lets a second socket
     bind a port that is already listening, so a second Hermes profile would share 47615 instead of taking
-    47616-47619, and a pane could reach the wrong profile's bridge (pairing then fails). Proposed fix, not applied:
-    on Windows, bind with `SO_EXCLUSIVEADDRUSE` and no `SO_REUSEADDR`, plus a Windows-only test.
+    47616-47619, and a pane could reach the wrong profile's bridge (pairing then fails). Since fixed in code: on
+    Windows the bridge binds with `SO_EXCLUSIVEADDRUSE` and no `SO_REUSEADDR`; a unit test checks it (not run live).
 * Bridge: the plugin's own `BridgeServer`, started in a throwaway Python process, listened on `127.0.0.1:47615` only;
   `/v1/hello` with the allowed origin answered 200, another origin 403, a wrong pairing code 401, and a minted code
   paired (200, pane token issued). Nothing listened on 47615-47619 before or after.
@@ -566,7 +566,7 @@ duplicate. Undo of an uncertain OneNote write was not retested on Windows.
 
 * A14 idle port release (a sixth profile while five hold ports; a pane left open across a release): unit-tested
   only. See "Five bridge ports" in [reference.md](reference.md#limits-five-bridge-ports-shared-by-every-profile).
-* Windows with two Hermes profiles running Workbench at once: not run (known defect: both can bind port 47615).
+* Windows with two Hermes profiles running Workbench at once: not run (the port 47615 double bind is fixed; unit-tested only).
 * A catalog install on Windows: not run (the Windows session used a manually copied plugin folder).
 * The harness's Electron 44.9.3 window uses the same `<webview>` settings as the Hermes Desktop preview pane, but it
   is not the Hermes Desktop app itself.

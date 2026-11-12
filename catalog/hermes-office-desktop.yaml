@@ -16,7 +16,7 @@ requires_hermes: ">=0.22.5"
 readme: true
 platforms: [macos, windows]  # Windows: one real Hermes Desktop session passed the 5-prompt story on 2026-11-10 with a single profile.
 known_issues:
-  - "Windows: run Workbench in one Hermes profile at a time (two profiles can both bind port 47615)."
+  - "Windows: two Hermes profiles at once are not live-tested (port 47615 is no longer bound twice)."
   - "Requires the Hermes Desktop app (macOS 13+ or Windows) on the same machine as the Hermes gateway, or with the bridge ports 47615-47619 forwarded; the browser Webapp (webapp.enabled) preview pane cannot host Office for the web."
   - "Pairing follows the chat session id: after auto-compression or a /rewind fork the pane reports NotPaired and needs a fresh office_connect code."
   - "powerpoint_add_speaker_notes is registered for schema parity but always returns Unsupported: Office.js for the web has no speaker-notes API."

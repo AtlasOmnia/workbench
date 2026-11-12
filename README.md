@@ -138,7 +138,7 @@ Hermes Desktop on macOS or Windows must run on the gateway machine. Upload once 
 * **All your Office panes can share one chat.** Switching to another chat unloads them; reopen Workbench from the
   ribbon to pair again.
 * Windows: one real Hermes Desktop session passed the 5-prompt story on 2026-11-10 with a single profile.
-* Windows: run Workbench in one Hermes profile at a time (two profiles can both bind port 47615).
+* Windows: two Hermes profiles at once are not live-tested (port 47615 is no longer bound twice).
 * **No Microsoft Graph**, so no OneDrive, To Do or Teams yet, no background sync, and no other notebooks than the
   open one.
 

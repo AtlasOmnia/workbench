@@ -18,7 +18,7 @@ preview pane. The free "Workbench for <app>" bridge add-in in that document
 executes your tool calls, so the user watches every edit land live.
 
 Windows: one real Hermes Desktop session passed the 5-prompt story on 2026-11-10 with a single profile.
-Windows: run Workbench in one Hermes profile at a time (two profiles can both bind port 47615).
+Windows: two Hermes profiles at once are not live-tested (port 47615 is no longer bound twice).
 Requires the Hermes Desktop app (macOS 13+ or Windows); the browser Webapp (`webapp.enabled`, v0.23.0) cannot host Office for the web in its preview pane; Desktop must run on the same machine as the Hermes gateway (or with the bridge ports forwarded).
 If `desktop_preview` `read` reports `surface: 'iframe'`, the user is in a browser tab: do not call
 `office_connect`; tell them to open this chat in the Hermes Desktop app instead.
